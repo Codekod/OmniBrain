@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:omnibrain_ai/domain/repositories/ai_command_repository.dart';
@@ -45,6 +46,7 @@ class AiCommandRepositoryImpl implements AiCommandRepository {
     ];
   }
 
+  @override
   Future<String> processTextCalculation(String text) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
@@ -93,6 +95,78 @@ $text
       return response.text ?? "{}";
     } catch (e) {
       return '{"error": "$e"}';
+    }
+  }
+
+  @override
+  Future<String> processImageCalculation(String imagePath) async {
+    final apiKey = dotenv.env['GEMINI_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('API Anahtarı bulunamadı.');
+    }
+
+    try {
+      final file = File(imagePath);
+      if (!await file.exists()) {
+        throw Exception('Görsel dosyası bulunamadı.');
+      }
+      final bytes = await file.readAsBytes();
+
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey,
+      );
+
+      final prompt = '''
+Sen dünyanın en gelişmiş görsel belge ve fiş/fatura analiz asistanısın.
+Sana verilen fotoğrafı piksel piksel incele:
+
+1. EĞER BU BİR FİŞ, FATURA VEYA FİNANSAL BELGE İSE:
+- Belgedeki işletme/mağaza adını ve tarihi tespit et.
+- Tüm ürün/kalemleri ve fiyatlarını çıkar.
+- KDV / Vergi tutarını veya oranını tespit et.
+- Genel Toplamı (Total) hesapla.
+- Sonucu SADECE geçerli bir JSON objesi olarak döndür (başka hiçbir metin veya markdown etiketi ekleme):
+{
+  "type": "finance",
+  "merchant": "Mağaza/İşletme Adı",
+  "date": "Tespit edilen tarih veya boş",
+  "items": [
+    {
+      "label": "Ürün/Hizmet Adı",
+      "amount": 45.50,
+      "type": "expense"
+    }
+  ],
+  "tax": 8.50,
+  "totalExpense": 150.00,
+  "totalIncome": 0,
+  "balance": -150.00
+}
+
+2. EĞER BU BİR MATEMATİK PROBLEMİ, DENKLEM VEYA EL YAZISI SORU İSE:
+- Görseldeki denklemi veya soruyu tanı.
+- Adım adım çözümünü Türkçe ve anlaşılır bir şekilde açıkla.
+- Yanıtını JSON DEĞİL, zengin Markdown formatında düz metin olarak ver.
+
+3. EĞER GÖRSELDE HİÇBİR YAZI, SAYI VEYA FİŞ YOKSA:
+Şu JSON formatını döndür:
+{
+  "error": "Görselde okunabilir bir fiş, fatura veya hesaplama öğesi tespit edilemedi. Lütfen daha aydınlık ve net bir fotoğraf çekin."
+}
+''';
+
+      final content = [
+        Content.multi([
+          TextPart(prompt),
+          DataPart('image/jpeg', bytes),
+        ]),
+      ];
+
+      final response = await model.generateContent(content);
+      return response.text ?? "{}";
+    } catch (e) {
+      return '{"error": "Görsel işlenirken bir hata oluştu: $e"}';
     }
   }
 

@@ -5,6 +5,8 @@ abstract class AiCommandRepository {
 
   Future<String> processTextCalculation(String text);
 
+  Future<String> processImageCalculation(String imagePath);
+
   Future<String> getPomodoroSuggestion(String task);
 
   Future<String> askMemory(String query, List<String> notesContext);
