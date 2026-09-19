@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:omnibrain_ai/core/constants/app_colors.dart';
 
 /// A single tool card for the dashboard grid with a premium Apple Home/Fintech aesthetic.
 class ToolWidgetCard extends StatefulWidget {
