@@ -1,14 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
-import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
+import 'package:omnibrain_ai/domain/entities/note.dart';
 import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 import 'package:omnibrain_ai/l10n/app_localizations.dart';
@@ -20,63 +21,115 @@ class NotesScreen extends ConsumerStatefulWidget {
   ConsumerState<NotesScreen> createState() => _NotesScreenState();
 }
 
-class _NotesScreenState extends ConsumerState<NotesScreen> {
-  final TextEditingController _textController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  
-  bool _isLoading = false;
-  List<Map<String, String>> _chatHistory = [];
+class _NotesScreenState extends ConsumerState<NotesScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
+  // AI Chat controllers
+  final TextEditingController _chatInputController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  bool _isAiLoading = false;
+  final List<Map<String, String>> _chatHistory = [];
+
+  // Notes list search & filter
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'Tümü';
+  String _searchQuery = '';
+
+  // Speech to text
   late stt.SpeechToText _speech;
   bool _isListening = false;
+
+  final List<String> _categories = [
+    'Tümü',
+    'Genel',
+    'İş',
+    'Kişisel',
+    'Fikirler',
+    'Finans',
+  ];
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'İş':
+        return AppColors.iceBlue;
+      case 'Kişisel':
+        return AppColors.softGreen;
+      case 'Fikirler':
+        return AppColors.amber;
+      case 'Finans':
+        return AppColors.coralRed;
+      default:
+        return AppColors.neonPurple;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _speech = stt.SpeechToText();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _chatInputController.dispose();
+    _chatScrollController.dispose();
+    _searchController.dispose();
+    _speech.stop();
+    super.dispose();
+  }
+
   Future<void> _toggleListening() async {
+    HapticFeedback.lightImpact();
     if (_isListening) {
       setState(() => _isListening = false);
       _speech.stop();
-      if (_textController.text.isNotEmpty) {
-        _processMessage(_textController.text);
+      if (_chatInputController.text.isNotEmpty) {
+        _processAiMessage(_chatInputController.text);
       }
     } else {
-      var status = await Permission.microphone.request();
+      final status = await Permission.microphone.request();
       if (status != PermissionStatus.granted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mikrofon izni gerekli')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Mikrofon izni gerekli')),
+          );
+        }
         return;
       }
 
-      bool available = await _speech.initialize(
+      final available = await _speech.initialize(
         onStatus: (val) {
-          if (val == 'done') {
+          if (val == 'done' || val == 'notListening') {
             setState(() => _isListening = false);
-            if (_textController.text.isNotEmpty) {
-              _processMessage(_textController.text);
+            if (_chatInputController.text.isNotEmpty) {
+              _processAiMessage(_chatInputController.text);
             }
           }
         },
-        onError: (val) => print('onError: $val'),
+        onError: (_) => setState(() => _isListening = false),
       );
-      
+
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          onResult: (val) => setState(() {
-            _textController.text = val.recognizedWords;
-          }),
+          listenOptions: stt.SpeechListenOptions(
+            listenMode: stt.ListenMode.confirmation,
+          ),
           localeId: 'tr_TR',
+          onResult: (val) {
+            setState(() {
+              _chatInputController.text = val.recognizedWords;
+            });
+          },
         );
       }
     }
   }
 
-  Future<void> _processMessage(String message) async {
+  Future<void> _processAiMessage(String message) async {
     if (_isListening) {
       _speech.stop();
       setState(() => _isListening = false);
@@ -85,62 +138,224 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final query = message.trim();
     if (query.isEmpty) return;
 
-    _textController.clear();
+    _chatInputController.clear();
     FocusScope.of(context).unfocus();
 
     setState(() {
       _chatHistory.add({'type': 'user', 'text': query});
-      _isLoading = true;
+      _isAiLoading = true;
     });
-    _scrollToBottom();
+    _scrollChatToBottom();
 
     final notesState = ref.read(notesProvider);
     final notes = notesState.value ?? [];
-    
+
     final contextLines = notes.map((n) {
-      final dateStr = DateFormat('dd.MM.yyyy HH:mm').format(n.createdAt);
-      return "Tarih: $dateStr\nNot: ${n.content}";
+      final dateStr = DateFormat('yyyy-MM-dd').format(n.createdAt);
+      return "[$dateStr] [${n.category}] ${n.content}";
     }).toList();
 
     try {
-      final aiRepo = ref.read(aiCommandRepositoryProvider);
-      final responseStr = await aiRepo.askMemory(query, contextLines);
-      
-      final cleanJson = responseStr.replaceAll('```json', '').replaceAll('```', '').trim();
-      final data = jsonDecode(cleanJson);
+      final repo = ref.read(aiCommandRepositoryProvider);
+      final responseText = await repo.askMemory(query, contextLines);
 
-      final action = data['action'];
-      final msg = data['message'] ?? 'Anlaşılmadı.';
-      
-      if (action == 'save') {
-        final noteToSave = data['note'] ?? query;
-        ref.read(notesProvider.notifier).addNote(noteToSave);
+      if (responseText.startsWith("KAYDEDILDI:")) {
+        final contentToSave = responseText.replaceFirst("KAYDEDILDI:", "").trim();
+        // Determine category by query keywords
+        String cat = 'Genel';
+        final lowerQuery = query.toLowerCase();
+        if (lowerQuery.contains('harca') || lowerQuery.contains('tl') || lowerQuery.contains('fiyat') || lowerQuery.contains('öde')) {
+          cat = 'Finans';
+        } else if (lowerQuery.contains('iş') || lowerQuery.contains('toplantı') || lowerQuery.contains('proje')) {
+          cat = 'İş';
+        } else if (lowerQuery.contains('fikir') || lowerQuery.contains('aklıma')) {
+          cat = 'Fikirler';
+        }
+
+        await ref.read(notesProvider.notifier).addNote(contentToSave, category: cat);
+
+        if (mounted) {
+          setState(() {
+            _chatHistory.add({
+              'type': 'ai',
+              'text': "Anlaşıldı! Bunu [$cat] kategorisine kaydettim:\n\"$contentToSave\"",
+            });
+            _isAiLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _chatHistory.add({'type': 'ai', 'text': responseText});
+            _isAiLoading = false;
+          });
+        }
       }
-
-      setState(() {
-        _chatHistory.add({'type': 'ai', 'text': msg});
-        _isLoading = false;
-      });
-      _scrollToBottom();
     } catch (e) {
-      setState(() {
-        _chatHistory.add({'type': 'ai', 'text': 'Sistemsel bir hata oluştu: $e'});
-        _isLoading = false;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _chatHistory.add({
+            'type': 'ai',
+            'text': "Üzgünüm, hafıza sorgulanırken bir hata oluştu.",
+          });
+          _isAiLoading = false;
+        });
+      }
     }
+    _scrollChatToBottom();
   }
 
-  void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
     });
+  }
+
+  void _showAddOrEditNoteDialog({Note? existingNote}) {
+    HapticFeedback.lightImpact();
+    final controller = TextEditingController(text: existingNote?.content ?? '');
+    String selectedCat = existingNote?.category ?? 'Genel';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.deepNightBlue,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      existingNote == null ? 'Yeni Not Ekle' : 'Notu Düzenle',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Category chips
+                    Wrap(
+                      spacing: 8,
+                      children: ['Genel', 'İş', 'Kişisel', 'Fikirler', 'Finans'].map((cat) {
+                        final isSelected = selectedCat == cat;
+                        final color = _getCategoryColor(cat);
+                        return ChoiceChip(
+                          label: Text(cat),
+                          selected: isSelected,
+                          selectedColor: color.withValues(alpha: 0.25),
+                          backgroundColor: Colors.white.withValues(alpha: 0.06),
+                          labelStyle: TextStyle(
+                            color: isSelected ? color : AppColors.textSecondary,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                          side: BorderSide(
+                            color: isSelected ? color : Colors.white10,
+                          ),
+                          onSelected: (val) {
+                            if (val) setModalState(() => selectedCat = cat);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Note text field
+                    TextField(
+                      controller: controller,
+                      maxLines: 5,
+                      autofocus: true,
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 15),
+                      decoration: InputDecoration(
+                        hintText: 'Aklındakileri buraya yaz...',
+                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+                        filled: true,
+                        fillColor: AppColors.darkNavy,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.neonPurple,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () {
+                          final text = controller.text.trim();
+                          if (text.isEmpty) return;
+
+                          if (existingNote == null) {
+                            ref.read(notesProvider.notifier).addNote(text, category: selectedCat);
+                          } else {
+                            ref.read(notesProvider.notifier).updateNote(
+                                  existingNote.copyWith(
+                                    content: text,
+                                    category: selectedCat,
+                                  ),
+                                );
+                          }
+                          Navigator.pop(context);
+                        },
+                        child: Text(
+                          existingNote == null ? 'Notu Kaydet' : 'Değişiklikleri Kaydet',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -159,77 +374,402 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(l10n.notesTitle),
-              Text('$memoryCount ${l10n.notesEmpty}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.list_alt, color: AppColors.iceBlue),
-              onPressed: () {
-                _showMemoryListDialog(context, notesState);
-              },
-            )
-          ],
-        ),
-        body: Column(
-          children: [
-            if (_chatHistory.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.psychology, size: 64, color: Colors.white24),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Bana her şeyi sorabilir\nveya yeni bir hatıra kaydedebilirsin.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white54),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Örn: 'Markete 500 tl harcadım'\nveya 'Geçen ay markete ne harcadım?'",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      ),
-                    ],
-                  ).animate().fadeIn(),
-                ),
-              )
-            else
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: _chatHistory.length,
-                  itemBuilder: (context, index) {
-                    final item = _chatHistory[index];
-                    if (item['type'] == 'user') {
-                      return _buildUserBubble(item['text']!);
-                    } else {
-                      return _buildAiBubble(item['text']!);
-                    }
-                  },
+              Text(
+                l10n.notesTitle,
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
                 ),
               ),
+              Text(
+                '$memoryCount kayıtlı not',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.neonPurple,
+            indicatorWeight: 3,
+            labelColor: AppColors.neonPurple,
+            unselectedLabelColor: AppColors.textSecondary,
+            labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(icon: Icon(Icons.sticky_note_2_rounded), text: 'Not Defterim'),
+              Tab(icon: Icon(Icons.psychology_rounded), text: 'AI İkinci Beyin'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            // TAB 1: Rich Notes List
+            _buildNotesListTab(notesState),
 
-            if (_isLoading)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.iceBlue, strokeWidth: 2)),
-                    const SizedBox(width: 12),
-                    Text("Hafıza taranıyor...", style: TextStyle(color: AppColors.iceBlue.withOpacity(0.8))),
-                  ],
-                ),
-              ).animate().fadeIn(),
-
-            _buildInputArea(),
+            // TAB 2: AI Second Brain Chat
+            _buildAiChatTab(),
           ],
         ),
+        floatingActionButton: _tabController.index == 0
+            ? FloatingActionButton(
+                backgroundColor: AppColors.neonPurple,
+                elevation: 4,
+                onPressed: () => _showAddOrEditNoteDialog(),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              )
+            : null,
       ),
+    );
+  }
+
+  // --- TAB 1: NOTES LIST VIEW ---
+  Widget _buildNotesListTab(AsyncValue<List<Note>> notesState) {
+    return notesState.when(
+      data: (allNotes) {
+        // Filter by category and search query
+        final filteredNotes = allNotes.where((note) {
+          final matchesCategory = _selectedCategory == 'Tümü' || note.category == _selectedCategory;
+          final matchesSearch = _searchQuery.isEmpty ||
+              note.content.toLowerCase().contains(_searchQuery.toLowerCase());
+          return matchesCategory && matchesSearch;
+        }).toList();
+
+        return Column(
+          children: [
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Notlarda ara...',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14),
+                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, color: AppColors.textSecondary, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ),
+
+            // Category Filter Horizontal Chips
+            SizedBox(
+              height: 42,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _categories.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final cat = _categories[index];
+                  final isSelected = _selectedCategory == cat;
+                  final color = cat == 'Tümü' ? AppColors.neonPurple : _getCategoryColor(cat);
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedCategory = cat);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? color.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? color : Colors.white.withValues(alpha: 0.08),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          cat,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? color : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Notes List
+            Expanded(
+              child: filteredNotes.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.note_alt_outlined,
+                            size: 56,
+                            color: Colors.white24,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? "Aradığınız kriterde not bulunamadı"
+                                : "Bu kategoride henüz not yok",
+                            style: const TextStyle(color: Colors.white54, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                      itemCount: filteredNotes.length,
+                      itemBuilder: (context, index) {
+                        final note = filteredNotes[index];
+                        final catColor = _getCategoryColor(note.category);
+                        final dateStr = DateFormat('dd MMM, HH:mm', 'tr').format(note.createdAt);
+
+                        return Dismissible(
+                          key: Key(note.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.coralRed.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
+                          ),
+                          onDismissed: (_) {
+                            HapticFeedback.mediumImpact();
+                            ref.read(notesProvider.notifier).deleteNote(note.id);
+                          },
+                          child: GestureDetector(
+                            onTap: () => _showAddOrEditNoteDialog(existingNote: note),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: note.isPinned
+                                      ? AppColors.amber.withValues(alpha: 0.5)
+                                      : AppColors.cardBorder,
+                                  width: note.isPinned ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      // Category Pill
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: catColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: catColor.withValues(alpha: 0.3), width: 0.8),
+                                        ),
+                                        child: Text(
+                                          note.category,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: catColor,
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Actions: Pin & Copy
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            dateStr,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white.withValues(alpha: 0.4),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () {
+                                              HapticFeedback.lightImpact();
+                                              ref.read(notesProvider.notifier).togglePinNote(note.id);
+                                            },
+                                            child: Icon(
+                                              note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                                              size: 18,
+                                              color: note.isPinned ? AppColors.amber : Colors.white38,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () {
+                                              HapticFeedback.lightImpact();
+                                              Clipboard.setData(ClipboardData(text: note.content));
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Not panoya kopyalandı!'),
+                                                  duration: Duration(seconds: 1),
+                                                ),
+                                              );
+                                            },
+                                            child: const Icon(
+                                              Icons.copy_rounded,
+                                              size: 16,
+                                              color: Colors.white38,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    note.content,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.neonPurple),
+      ),
+      error: (err, _) => Center(
+        child: Text('Notlar yüklenirken hata oluştu: $err', style: const TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+
+  // --- TAB 2: AI SECOND BRAIN CHAT ---
+  Widget _buildAiChatTab() {
+    return Column(
+      children: [
+        if (_chatHistory.isEmpty)
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.neonPurple.withValues(alpha: 0.15),
+                        border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.3)),
+                      ),
+                      child: const Icon(Icons.psychology, size: 48, color: AppColors.iceBlue),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "İkinci Beynine Sor veya Not Bırak",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Kaydettiğin tüm notlar hafızamda tutulur.\nİster konuşarak yeni not ekle, ister geçmişi sor.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: Text(
+                        "💡 Örnek: 'Market için 350 TL harcadım' veya\n'Geçen ayki harcamalarım ne kadar tuttu?'",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              controller: _chatScrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: _chatHistory.length,
+              itemBuilder: (context, index) {
+                final item = _chatHistory[index];
+                if (item['type'] == 'user') {
+                  return _buildUserBubble(item['text']!);
+                } else {
+                  return _buildAiBubble(item['text']!);
+                }
+              },
+            ),
+          ),
+
+        if (_isAiLoading)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: AppColors.iceBlue, strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Hafıza taranıyor...",
+                  style: TextStyle(color: AppColors.iceBlue.withValues(alpha: 0.8)),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(),
+
+        _buildChatInputArea(),
+      ],
     );
   }
 
@@ -241,24 +781,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
-          border: Border.all(color: AppColors.neonPurple.withOpacity(0.5), width: 1),
+          border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.5), width: 1),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
             bottomLeft: Radius.circular(20),
             bottomRight: Radius.circular(4),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.neonPurple.withOpacity(0.1),
-              blurRadius: 10,
-              spreadRadius: 1,
-            )
-          ],
         ),
-        child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 15)),
+        child: Text(
+          text,
+          style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 14),
+        ),
       ),
-    ).animate().slideX(begin: 0.2, end: 0).fadeIn();
+    );
   }
 
   Widget _buildAiBubble(String text) {
@@ -268,46 +804,48 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         margin: const EdgeInsets.only(bottom: 16, right: 50),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.iceBlue.withOpacity(0.1),
-          border: Border.all(color: AppColors.iceBlue.withOpacity(0.3)),
+          color: AppColors.darkNavy,
+          border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.3), width: 1),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
             bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.auto_awesome, color: AppColors.iceBlue, size: 20),
+            const Icon(Icons.auto_awesome, color: AppColors.iceBlue, size: 18),
             const SizedBox(width: 8),
-            Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 15))),
+            Expanded(
+              child: Text(
+                text,
+                style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
+              ),
+            ),
           ],
         ),
       ),
-    ).animate().slideX(begin: -0.2, end: 0).fadeIn();
+    );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildChatInputArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(
-        bottom: MediaQuery.of(context).padding.bottom + 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.deepNightBlue.withOpacity(0.95),
-        border: const Border(top: BorderSide(color: Colors.white10)),
+        color: AppColors.deepNightBlue,
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             offset: const Offset(0, -4),
             blurRadius: 10,
-          )
+          ),
         ],
       ),
       child: Row(
         children: [
-          // Mikrofon Butonu
           GestureDetector(
             onTap: _toggleListening,
             child: AnimatedContainer(
@@ -315,7 +853,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _isListening ? AppColors.coralRed.withOpacity(0.2) : Colors.transparent,
+                color: _isListening ? AppColors.coralRed.withValues(alpha: 0.2) : Colors.transparent,
                 border: Border.all(
                   color: _isListening ? AppColors.coralRed : Colors.white24,
                 ),
@@ -327,15 +865,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               ),
             ),
           ),
-          if (_isListening) const SizedBox(width: 8) else const SizedBox(width: 12),
-          
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
-              controller: _textController,
+              controller: _chatInputController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: _isListening ? "Dinliyorum..." : "Yaz veya konuş...",
-                hintStyle: TextStyle(color: _isListening ? AppColors.coralRed : Colors.white38),
+                hintText: _isListening ? "Dinliyorum..." : "Hafızaya sor veya not yaz...",
+                hintStyle: TextStyle(
+                  color: _isListening ? AppColors.coralRed : Colors.white38,
+                  fontSize: 14,
+                ),
                 filled: true,
                 fillColor: AppColors.darkNavy,
                 border: OutlineInputBorder(
@@ -348,18 +888,18 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: AppColors.neonPurple.withOpacity(0.5)),
+                  borderSide: BorderSide(color: AppColors.neonPurple.withValues(alpha: 0.5)),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              onSubmitted: _processMessage,
+              onSubmitted: _processAiMessage,
             ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
-              if (_textController.text.isNotEmpty) {
-                _processMessage(_textController.text);
+              if (_chatInputController.text.isNotEmpty) {
+                _processAiMessage(_chatInputController.text);
               }
             },
             child: Container(
@@ -371,90 +911,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.neonPurple.withOpacity(0.3),
+                    color: AppColors.neonPurple.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 1,
-                  )
+                  ),
                 ],
               ),
-              child: const Icon(Icons.send, color: Colors.white, size: 24),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showMemoryListDialog(BuildContext context, AsyncValue notesState) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.deepNightBlue,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            final notes = notesState.value ?? [];
-            if (notes.isEmpty) {
-              return const Center(child: Text("Hafıza boş.", style: TextStyle(color: Colors.white)));
-            }
-            return Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                ),
-                Text("Tüm Kayıtlar", style: AppTextStyles.cardTitle.copyWith(color: Colors.white)),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: notes.length,
-                    itemBuilder: (context, index) {
-                      final note = notes[index];
-                      return Dismissible(
-                        key: Key(note.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          decoration: BoxDecoration(
-                            color: AppColors.coralRed.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        onDismissed: (_) {
-                          ref.read(notesProvider.notifier).deleteNote(note.id);
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.cardBorder),
-                          ),
-                          child: Text(note.content, style: const TextStyle(color: Colors.white)),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }
