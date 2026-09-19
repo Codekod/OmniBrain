@@ -5,6 +5,9 @@ class ReminderEntity {
   final DateTime dueDate;
   final String? sourceDocumentId;
   final bool isCompleted;
+  final String priority; // 'high', 'medium', 'low'
+  final String category; // 'İş', 'Kişisel', 'Ödeme', 'Sağlık', 'Genel'
+  final String repeat;   // 'none', 'daily', 'weekdays', 'monthly'
 
   const ReminderEntity({
     required this.id,
@@ -13,6 +16,9 @@ class ReminderEntity {
     required this.dueDate,
     this.sourceDocumentId,
     this.isCompleted = false,
+    this.priority = 'medium',
+    this.category = 'Genel',
+    this.repeat = 'none',
   });
 
   ReminderEntity copyWith({
@@ -22,6 +28,9 @@ class ReminderEntity {
     DateTime? dueDate,
     String? sourceDocumentId,
     bool? isCompleted,
+    String? priority,
+    String? category,
+    String? repeat,
   }) {
     return ReminderEntity(
       id: id ?? this.id,
@@ -30,6 +39,9 @@ class ReminderEntity {
       dueDate: dueDate ?? this.dueDate,
       sourceDocumentId: sourceDocumentId ?? this.sourceDocumentId,
       isCompleted: isCompleted ?? this.isCompleted,
+      priority: priority ?? this.priority,
+      category: category ?? this.category,
+      repeat: repeat ?? this.repeat,
     );
   }
 
@@ -48,7 +60,10 @@ class ReminderEntity {
           description == other.description &&
           dueDate == other.dueDate &&
           sourceDocumentId == other.sourceDocumentId &&
-          isCompleted == other.isCompleted;
+          isCompleted == other.isCompleted &&
+          priority == other.priority &&
+          category == other.category &&
+          repeat == other.repeat;
 
   @override
   int get hashCode =>
@@ -57,9 +72,12 @@ class ReminderEntity {
       description.hashCode ^
       dueDate.hashCode ^
       sourceDocumentId.hashCode ^
-      isCompleted.hashCode;
+      isCompleted.hashCode ^
+      priority.hashCode ^
+      category.hashCode ^
+      repeat.hashCode;
 
   @override
   String toString() =>
-      'ReminderEntity(id: $id, title: $title, dueDate: $dueDate, isCompleted: $isCompleted)';
+      'ReminderEntity(id: $id, title: $title, dueDate: $dueDate, priority: $priority, category: $category, isCompleted: $isCompleted)';
 }

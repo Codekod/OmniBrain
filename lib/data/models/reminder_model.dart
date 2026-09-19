@@ -7,6 +7,9 @@ class ReminderModel {
   final DateTime dueDate;
   final String? sourceDocumentId;
   final bool isCompleted;
+  final String priority;
+  final String category;
+  final String repeat;
 
   const ReminderModel({
     required this.id,
@@ -15,6 +18,9 @@ class ReminderModel {
     required this.dueDate,
     this.sourceDocumentId,
     this.isCompleted = false,
+    this.priority = 'medium',
+    this.category = 'Genel',
+    this.repeat = 'none',
   });
 
   factory ReminderModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +33,9 @@ class ReminderModel {
           : DateTime.now(),
       sourceDocumentId: json['source_document_id'] as String?,
       isCompleted: json['is_completed'] as bool? ?? false,
+      priority: json['priority'] as String? ?? 'medium',
+      category: json['category'] as String? ?? 'Genel',
+      repeat: json['repeat'] as String? ?? 'none',
     );
   }
 
@@ -38,6 +47,9 @@ class ReminderModel {
       'due_date': dueDate.toIso8601String(),
       'source_document_id': sourceDocumentId,
       'is_completed': isCompleted,
+      'priority': priority,
+      'category': category,
+      'repeat': repeat,
     };
   }
 
@@ -49,6 +61,9 @@ class ReminderModel {
       dueDate: dueDate,
       sourceDocumentId: sourceDocumentId,
       isCompleted: isCompleted,
+      priority: priority,
+      category: category,
+      repeat: repeat,
     );
   }
 
@@ -60,10 +75,13 @@ class ReminderModel {
       dueDate: entity.dueDate,
       sourceDocumentId: entity.sourceDocumentId,
       isCompleted: entity.isCompleted,
+      priority: entity.priority,
+      category: entity.category,
+      repeat: entity.repeat,
     );
   }
 
   @override
   String toString() =>
-      'ReminderModel(id: $id, title: $title, dueDate: $dueDate, isCompleted: $isCompleted)';
+      'ReminderModel(id: $id, title: $title, dueDate: $dueDate, priority: $priority, isCompleted: $isCompleted)';
 }

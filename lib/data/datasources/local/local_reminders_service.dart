@@ -83,6 +83,9 @@ class LocalRemindersService {
       description: reminder.description,
       dueDate: reminder.dueDate,
       isCompleted: reminder.isCompleted,
+      priority: reminder.priority,
+      category: reminder.category,
+      repeat: reminder.repeat,
     );
     
     reminders.insert(0, newReminder);
@@ -150,6 +153,9 @@ class LocalRemindersService {
       dueDate: current.dueDate,
       sourceDocumentId: current.sourceDocumentId,
       isCompleted: true,
+      priority: current.priority,
+      category: current.category,
+      repeat: current.repeat,
     );
     
     reminders[index] = updated;
