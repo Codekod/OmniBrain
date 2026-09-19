@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:omnibrain_ai/core/providers/streak_provider.dart';
 
 class PomodoroState {
   final int focusMinutes;
@@ -9,6 +10,7 @@ class PomodoroState {
   final bool isRunning;
   final bool isBreak;
   final String message;
+  final int completedSessionsToday;
 
   PomodoroState({
     required this.focusMinutes,
@@ -18,6 +20,7 @@ class PomodoroState {
     required this.isRunning,
     required this.isBreak,
     required this.message,
+    this.completedSessionsToday = 0,
   });
 
   PomodoroState copyWith({
@@ -28,6 +31,7 @@ class PomodoroState {
     bool? isRunning,
     bool? isBreak,
     String? message,
+    int? completedSessionsToday,
   }) {
     return PomodoroState(
       focusMinutes: focusMinutes ?? this.focusMinutes,
@@ -37,14 +41,16 @@ class PomodoroState {
       isRunning: isRunning ?? this.isRunning,
       isBreak: isBreak ?? this.isBreak,
       message: message ?? this.message,
+      completedSessionsToday: completedSessionsToday ?? this.completedSessionsToday,
     );
   }
 }
 
 class PomodoroNotifier extends StateNotifier<PomodoroState> {
+  final Ref _ref;
   Timer? _timer;
 
-  PomodoroNotifier()
+  PomodoroNotifier(this._ref)
       : super(PomodoroState(
           focusMinutes: 25,
           breakMinutes: 5,
@@ -53,7 +59,21 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
           isRunning: false,
           isBreak: false,
           message: 'Ne üzerinde çalışacaksın?',
+          completedSessionsToday: 0,
         ));
+
+  void setPresetDuration(int focusMins, int breakMins, String label) {
+    _timer?.cancel();
+    state = state.copyWith(
+      focusMinutes: focusMins,
+      breakMinutes: breakMins,
+      remainingSeconds: focusMins * 60,
+      totalSeconds: focusMins * 60,
+      isRunning: false,
+      isBreak: false,
+      message: '$label seansı hazır. Başlamak için oynat butonuna dokun!',
+    );
+  }
 
   void setAiSuggestion(int focusMins, int breakMins, String msg) {
     _timer?.cancel();
@@ -104,7 +124,7 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
 
   void _handleSessionEnd() {
     if (state.isBreak) {
-      // Mola bitti, çalışmaya dön
+      // Break ended, switch to focus
       state = state.copyWith(
         isBreak: false,
         remainingSeconds: state.focusMinutes * 60,
@@ -113,13 +133,16 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
         message: 'Mola bitti! Yeni bir odak seansına hazır mısın?',
       );
     } else {
-      // Çalışma bitti, molaya geç
+      // Focus ended, record streak and switch to break
+      _ref.read(streakProvider.notifier).recordActivity();
+
       state = state.copyWith(
         isBreak: true,
         remainingSeconds: state.breakMinutes * 60,
         totalSeconds: state.breakMinutes * 60,
         isRunning: false,
-        message: 'Harika iş çıkardın! Şimdi dinlenme vakti.',
+        completedSessionsToday: state.completedSessionsToday + 1,
+        message: 'Harika iş çıkardın! Şimdi dinlenme vakti. ☕',
       );
     }
   }
@@ -132,5 +155,5 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
 }
 
 final pomodoroProvider = StateNotifierProvider<PomodoroNotifier, PomodoroState>((ref) {
-  return PomodoroNotifier();
+  return PomodoroNotifier(ref);
 });
