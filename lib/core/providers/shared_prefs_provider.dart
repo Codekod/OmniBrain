@@ -10,5 +10,5 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 /// Provides a simple boolean to check if the user has seen the onboarding.
 final hasSeenOnboardingProvider = Provider<bool>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return prefs.getBool('has_seen_onboarding') ?? false;
+  return prefs.getBool('has_seen_onboarding_v2') ?? false;
 });

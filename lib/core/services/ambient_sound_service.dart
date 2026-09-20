@@ -6,14 +6,14 @@ class AmbientTrack {
   final String id;
   final String name;
   final String icon;
-  final String url;
+  final String assetPath;
   final bool isPro;
 
   const AmbientTrack({
     required this.id,
     required this.name,
     required this.icon,
-    required this.url,
+    required this.assetPath,
     required this.isPro,
   });
 }
@@ -23,35 +23,35 @@ const List<AmbientTrack> ambientTracks = [
     id: 'rain',
     name: 'Yağmur',
     icon: '🌧️',
-    url: 'https://cdn.freesound.org/previews/531/531947_11861866-lq.mp3',
+    assetPath: 'audio/rain.mp3',
     isPro: false, // Free for all users
   ),
   AmbientTrack(
     id: 'forest',
     name: 'Orman',
     icon: '🌲',
-    url: 'https://cdn.freesound.org/previews/524/524312_11543324-lq.mp3',
+    assetPath: 'audio/forest.mp3',
     isPro: true, // PRO
   ),
   AmbientTrack(
     id: 'campfire',
     name: 'Şömine',
     icon: '🔥',
-    url: 'https://cdn.freesound.org/previews/415/415209_5121236-lq.mp3',
+    assetPath: 'audio/campfire.mp3',
     isPro: true, // PRO
   ),
   AmbientTrack(
     id: 'waves',
     name: 'Okyanus',
     icon: '🌊',
-    url: 'https://cdn.freesound.org/previews/413/413749_7037-lq.mp3',
+    assetPath: 'audio/waves.mp3',
     isPro: true, // PRO
   ),
   AmbientTrack(
     id: 'whitenoise',
     name: 'Beyaz Gürültü',
     icon: '📻',
-    url: 'https://cdn.freesound.org/previews/488/488388_10037320-lq.mp3',
+    assetPath: 'audio/whitenoise.mp3',
     isPro: true, // PRO
   ),
 ];
@@ -85,8 +85,14 @@ class AmbientSoundNotifier extends StateNotifier<AmbientSoundState> {
   final AudioPlayer _player = AudioPlayer();
 
   AmbientSoundNotifier() : super(const AmbientSoundState()) {
-    _player.setReleaseMode(ReleaseMode.loop);
-    _player.setVolume(state.volume);
+    _initAudio();
+  }
+
+  Future<void> _initAudio() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.setVolume(state.volume);
+    } catch (_) {}
   }
 
   Future<void> toggleTrack(AmbientTrack track) async {
@@ -101,8 +107,8 @@ class AmbientSoundNotifier extends StateNotifier<AmbientSoundState> {
     try {
       state = state.copyWith(activeTrackId: track.id, isPlaying: true);
       await _player.stop();
-      await _player.setSourceUrl(track.url);
-      await _player.resume();
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(AssetSource(track.assetPath), volume: state.volume);
     } catch (e) {
       debugPrint('Error playing ambient sound: $e');
       state = state.copyWith(isPlaying: false);

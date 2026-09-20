@@ -55,7 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final prefs = ref.read(sharedPreferencesProvider);
       await prefs.setString('user_purpose', _selectedPurpose);
-      await prefs.setBool('has_seen_onboarding', true);
+      await prefs.setBool('has_seen_onboarding_v2', true);
     } catch (_) {}
 
     await Future.delayed(const Duration(milliseconds: 1000));

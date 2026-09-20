@@ -442,6 +442,31 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                         ),
                       ),
                     ),
+                    if (existingNote != null) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.iceBlue,
+                            side: BorderSide(color: AppColors.iceBlue.withValues(alpha: 0.4)),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          label: Text(
+                            'Bu Notu PDF veya Word Olarak Paylaş',
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showNoteExportSheet(context, existingNote);
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -776,10 +801,28 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                                           const SizedBox(width: 8),
                                           GestureDetector(
                                             onTap: () => _showNoteExportSheet(context, note),
-                                            child: const Icon(
-                                              Icons.ios_share_rounded,
-                                              size: 16,
-                                              color: Colors.white54,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.iceBlue.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.35), width: 0.8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.ios_share_rounded, size: 12, color: AppColors.iceBlue),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Paylaş',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: AppColors.iceBlue,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ],
