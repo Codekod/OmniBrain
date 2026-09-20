@@ -13,6 +13,7 @@ import 'package:omnibrain_ai/core/services/ambient_sound_service.dart';
 import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/features/pomodoro/providers/pomodoro_providers.dart';
+import 'package:omnibrain_ai/features/pomodoro/widgets/ambient_visual_layer.dart';
 import 'package:omnibrain_ai/features/pomodoro/widgets/focus_tree_view.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 
@@ -27,6 +28,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
     with WidgetsBindingObserver {
   final TextEditingController _taskController = TextEditingController();
   bool _isLoading = false;
+  FocusTreeType _selectedTreeType = FocusTreeType.pine;
 
   @override
   void initState() {
@@ -147,286 +149,454 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
           ],
         ),
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              // AI Task duration coach
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.psychology_rounded, color: AppColors.iceBlue, size: 22),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _taskController,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                          decoration: const InputDecoration(
-                            hintText: "Ne yapacaksın? AI süre önersin...",
-                            hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
-                            border: InputBorder.none,
-                          ),
-                          onSubmitted: (_) => _askAiForSuggestion(),
-                        ),
-                      ),
-                      if (_isLoading)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: AppColors.iceBlue, strokeWidth: 2),
-                        )
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.auto_awesome, color: AppColors.iceBlue, size: 20),
-                          tooltip: 'AI ile Süre Planla',
-                          onPressed: _askAiForSuggestion,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              // Ambient sound 60fps dynamic visual background
+              const AmbientVisualLayer(),
 
-              // Preset Duration Pills
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    _buildPresetChip(
-                      label: '25 dk',
-                      focus: 25,
-                      breakMins: 5,
-                      title: 'Klasik Pomodoro',
-                      notifier: notifier,
-                      isSelected: pomodoroState.focusMinutes == 25 && !pomodoroState.isBreak,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildPresetChip(
-                      label: '45 dk',
-                      focus: 45,
-                      breakMins: 10,
-                      title: 'Derin Çalışma',
-                      notifier: notifier,
-                      isSelected: pomodoroState.focusMinutes == 45 && !pomodoroState.isBreak,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildPresetChip(
-                      label: '60 dk',
-                      focus: 60,
-                      breakMins: 15,
-                      title: 'Maraton',
-                      notifier: notifier,
-                      isSelected: pomodoroState.focusMinutes == 60 && !pomodoroState.isBreak,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildPresetChip(
-                      label: '5 dk Mola',
-                      focus: pomodoroState.focusMinutes,
-                      breakMins: 5,
-                      title: 'Hızlı Mola',
-                      isBreakPreset: true,
-                      notifier: notifier,
-                      isSelected: pomodoroState.isBreak,
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(),
-
-              // Mode Badge (Odaklanma vs. Mola)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: primaryColor.withValues(alpha: 0.5)),
-                ),
-                child: Text(
-                  modeText,
-                  style: GoogleFonts.inter(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    fontSize: 12,
-                  ),
-                ),
-              ).animate(target: pomodoroState.isRunning ? 1 : 0).shimmer(duration: 2.seconds),
-
-              const SizedBox(height: 24),
-
-              // Circular Countdown Timer
-              Stack(
-                alignment: Alignment.center,
+              // Main Pomodoro Content
+              Column(
                 children: [
-                  SizedBox(
-                    width: 270,
-                    height: 270,
-                    child: CircularProgressIndicator(
-                      value: progress,
-                      strokeWidth: 8,
-                      backgroundColor: AppColors.darkNavy,
-                      color: primaryColor,
-                      strokeCap: StrokeCap.round,
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FocusTreeView(
-                        progress: pomodoroState.totalSeconds > 0
-                            ? (pomodoroState.totalSeconds - pomodoroState.remainingSeconds) / pomodoroState.totalSeconds
-                            : 0.0,
-                        isRunning: pomodoroState.isRunning,
-                        isBreak: pomodoroState.isBreak,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$minutes:$seconds',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 46,
-                          fontWeight: FontWeight.w200,
-                          color: Colors.white,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      if (!pomodoroState.isRunning &&
-                          pomodoroState.remainingSeconds < pomodoroState.totalSeconds)
-                        Text(
-                          "DURAKLATILDI",
-                          style: GoogleFonts.inter(
-                            color: Colors.white54,
-                            letterSpacing: 2,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      else if (pomodoroState.isRunning)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: primaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              pomodoroState.isBreak ? "DİNLENME" : "ODAKLANILIYOR",
-                              style: GoogleFonts.inter(
-                                color: primaryColor,
-                                letterSpacing: 1.5,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-
-              // Timer Controls (Reset - Play/Pause - Skip)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildControlButton(
-                    icon: Icons.refresh_rounded,
-                    color: Colors.white54,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      notifier.resetTimer();
-                    },
-                  ),
-                  const SizedBox(width: 28),
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.mediumImpact();
-                      notifier.toggleTimer();
-                    },
+                  // AI Task duration coach
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
                     child: Container(
-                      width: 78,
-                      height: 78,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: primaryColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          )
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.psychology_rounded, color: AppColors.iceBlue, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _taskController,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              decoration: const InputDecoration(
+                                hintText: "Ne yapacaksın? AI süre önersin...",
+                                hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _askAiForSuggestion(),
+                            ),
+                          ),
+                          if (_isLoading)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: AppColors.iceBlue, strokeWidth: 2),
+                            )
+                          else
+                            IconButton(
+                              icon: const Icon(Icons.auto_awesome, color: AppColors.iceBlue, size: 20),
+                              tooltip: 'AI ile Süre Planla',
+                              onPressed: _askAiForSuggestion,
+                            ),
                         ],
                       ),
-                      child: Icon(
-                        pomodoroState.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        size: 40,
-                        color: Colors.white,
-                      ),
                     ),
                   ),
-                  const SizedBox(width: 28),
-                  _buildControlButton(
-                    icon: Icons.skip_next_rounded,
-                    color: Colors.white54,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      notifier.skipSession();
-                    },
-                  ),
-                ],
-              ),
 
-              const Spacer(),
-
-              // Ambient Sounds Selector (Rain, Forest, Campfire, Waves, White Noise)
-              _buildAmbientSoundsBar(context, ref),
-
-              // Session Status Message (Clean, non-redundant)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        pomodoroState.isBreak ? Icons.coffee_rounded : Icons.flare_rounded,
-                        color: pomodoroState.isBreak ? AppColors.softGreen : AppColors.amber,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          pomodoroState.isRunning
-                              ? (pomodoroState.isBreak
-                                  ? "Gözlerini dinlendir, derin nefes al..."
-                                  : "Odaklanma aktif. Süre bitince seni sesle uyaracağız 🔔")
-                              : pomodoroState.message,
-                          style: AppTextStyles.bodyText.copyWith(color: Colors.white70, fontSize: 13),
+                  // Preset Duration Pills
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                    child: Row(
+                      children: [
+                        _buildPresetChip(
+                          label: '25 dk',
+                          focus: 25,
+                          breakMins: 5,
+                          title: 'Klasik Pomodoro',
+                          notifier: notifier,
+                          isSelected: pomodoroState.focusMinutes == 25 && !pomodoroState.isBreak,
                         ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: '45 dk',
+                          focus: 45,
+                          breakMins: 10,
+                          title: 'Derin Çalışma',
+                          notifier: notifier,
+                          isSelected: pomodoroState.focusMinutes == 45 && !pomodoroState.isBreak,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: '60 dk',
+                          focus: 60,
+                          breakMins: 15,
+                          title: 'Maraton',
+                          notifier: notifier,
+                          isSelected: pomodoroState.focusMinutes == 60 && !pomodoroState.isBreak,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildPresetChip(
+                          label: '5 dk Mola',
+                          focus: pomodoroState.focusMinutes,
+                          breakMins: 5,
+                          title: 'Hızlı Mola',
+                          isBreakPreset: true,
+                          notifier: notifier,
+                          isSelected: pomodoroState.isBreak,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Focus Tree Selector Chips (Pine, Sakura, Bonsai)
+                  _buildTreeTypeSelector(ref.watch(isProProvider)),
+
+                  const Spacer(),
+
+                  // Mode Badge (Odaklanma vs. Mola)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.5)),
+                    ),
+                    child: Text(
+                      modeText,
+                      style: GoogleFonts.inter(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ).animate(target: pomodoroState.isRunning ? 1 : 0).shimmer(duration: 2.seconds),
+
+                  const SizedBox(height: 20),
+
+                  // Circular Countdown Timer with Animated Focus Tree
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 270,
+                        height: 270,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 8,
+                          backgroundColor: AppColors.darkNavy,
+                          color: primaryColor,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FocusTreeView(
+                            progress: pomodoroState.totalSeconds > 0
+                                ? (pomodoroState.totalSeconds - pomodoroState.remainingSeconds) / pomodoroState.totalSeconds
+                                : 0.0,
+                            isRunning: pomodoroState.isRunning,
+                            isBreak: pomodoroState.isBreak,
+                            treeType: _selectedTreeType,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$minutes:$seconds',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 46,
+                              fontWeight: FontWeight.w200,
+                              color: Colors.white,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          if (!pomodoroState.isRunning &&
+                              pomodoroState.remainingSeconds < pomodoroState.totalSeconds)
+                            Text(
+                              "DURAKLATILDI",
+                              style: GoogleFonts.inter(
+                                color: Colors.white54,
+                                letterSpacing: 2,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          else if (pomodoroState.isRunning)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  pomodoroState.isBreak ? "DİNLENME" : "ODAKLANILIYOR",
+                                  style: GoogleFonts.inter(
+                                    color: primaryColor,
+                                    letterSpacing: 1.5,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-              ).animate().fadeIn(duration: 400.ms),
+
+                  const SizedBox(height: 32),
+
+                  // Timer Controls (Reset - Play/Pause - Skip)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildControlButton(
+                        icon: Icons.refresh_rounded,
+                        color: Colors.white54,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _handleReset(context, notifier, pomodoroState.isRunning);
+                        },
+                      ),
+                      const SizedBox(width: 28),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          notifier.toggleTimer();
+                        },
+                        child: Container(
+                          width: 78,
+                          height: 78,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              )
+                            ],
+                          ),
+                          child: Icon(
+                            pomodoroState.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            size: 40,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 28),
+                      _buildControlButton(
+                        icon: Icons.skip_next_rounded,
+                        color: Colors.white54,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          notifier.skipSession();
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  // Ambient Sounds Selector (Rain, Forest, Campfire, Waves, White Noise)
+                  _buildAmbientSoundsBar(context, ref),
+
+                  // Session Status Message
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            pomodoroState.isBreak ? Icons.coffee_rounded : Icons.flare_rounded,
+                            color: pomodoroState.isBreak ? AppColors.softGreen : AppColors.amber,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              pomodoroState.isRunning
+                                  ? (pomodoroState.isBreak
+                                      ? "Gözlerini dinlendir, derin nefes al..."
+                                      : "Odaklanma aktif. Süre bitince seni sesle uyaracağız 🔔")
+                                  : pomodoroState.message,
+                              style: AppTextStyles.bodyText.copyWith(color: Colors.white70, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ).animate().fadeIn(duration: 400.ms),
+                ],
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleReset(BuildContext context, PomodoroNotifier notifier, bool isRunning) async {
+    if (!isRunning) {
+      notifier.resetTimer();
+      return;
+    }
+
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.darkNavy,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Row(
+          children: [
+            const Text('🌱 ', style: TextStyle(fontSize: 22)),
+            Text(
+              'Ağacın Solmasın!',
+              style: GoogleFonts.montserrat(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Odaklanma seansını şimdi sıfırlarsan büyümekte olan ağacın kuruyacak. Emin misin?',
+          style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Vazgeç',
+              style: GoogleFonts.inter(color: AppColors.softGreen, fontWeight: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.coralRed.withValues(alpha: 0.2),
+              foregroundColor: AppColors.coralRed,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Ağacı Feda Et',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReset == true) {
+      notifier.resetTimer();
+    }
+  }
+
+  Widget _buildTreeTypeSelector(bool isPro) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildTreeChip(
+            type: FocusTreeType.pine,
+            label: '🌲 Çam',
+            isProOnly: false,
+            isPro: isPro,
+          ),
+          const SizedBox(width: 8),
+          _buildTreeChip(
+            type: FocusTreeType.sakura,
+            label: '🌸 Sakura',
+            isProOnly: true,
+            isPro: isPro,
+          ),
+          const SizedBox(width: 8),
+          _buildTreeChip(
+            type: FocusTreeType.bonsai,
+            label: '🪴 Bonsai',
+            isProOnly: true,
+            isPro: isPro,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreeChip({
+    required FocusTreeType type,
+    required String label,
+    required bool isProOnly,
+    required bool isPro,
+  }) {
+    final isSelected = _selectedTreeType == type;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        if (isProOnly && !isPro) {
+          context.push(RoutePaths.paywall);
+          return;
+        }
+        setState(() => _selectedTreeType = type);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.softGreen.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.softGreen
+                : (isProOnly && !isPro
+                    ? AppColors.amber.withValues(alpha: 0.3)
+                    : Colors.white.withValues(alpha: 0.1)),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.white70,
+              ),
+            ),
+            if (isProOnly && !isPro) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PRO',
+                  style: TextStyle(fontSize: 7, fontWeight: FontWeight.w900, color: AppColors.amber),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

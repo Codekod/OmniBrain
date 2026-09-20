@@ -8,6 +8,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/services/meeting_export_service.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/domain/entities/note.dart';
 import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
@@ -216,6 +217,98 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
         );
       }
     });
+  }
+
+  void _showNoteExportSheet(BuildContext context, Note note) {
+    HapticFeedback.lightImpact();
+    final firstLine = note.content.split('\n').first.replaceAll(RegExp(r'^#+\s*'), '').trim();
+    final title = firstLine.isNotEmpty ? firstLine : 'Not_${note.category}';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.deepNightBlue,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Notu Dışa Aktar',
+              style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Kurumsal PDF veya düzenlenebilir Word belgesi oluşturun',
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.white54),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFE11D48)),
+              ),
+              title: Text('PDF Raporu Olarak Paylaş', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+              subtitle: Text('Kurumsal antetli, profesyonel dizgi', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () {
+                Navigator.pop(ctx);
+                MeetingExportService.exportToPdf(
+                  context: context,
+                  ref: ref,
+                  title: title,
+                  content: note.content,
+                  category: note.category,
+                  date: note.createdAt,
+                );
+              },
+            ),
+            const Divider(color: Colors.white10),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.description_rounded, color: Color(0xFF2563EB)),
+              ),
+              title: Text('Word (.doc) Olarak Paylaş', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+              subtitle: Text('Düzenlenebilir Microsoft Word formatı', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () {
+                Navigator.pop(ctx);
+                MeetingExportService.exportToWord(
+                  context: context,
+                  ref: ref,
+                  title: title,
+                  content: note.content,
+                  category: note.category,
+                  date: note.createdAt,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAddOrEditNoteDialog({Note? existingNote}) {
@@ -678,6 +771,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                                               Icons.copy_rounded,
                                               size: 16,
                                               color: Colors.white38,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () => _showNoteExportSheet(context, note),
+                                            child: const Icon(
+                                              Icons.ios_share_rounded,
+                                              size: 16,
+                                              color: Colors.white54,
                                             ),
                                           ),
                                         ],

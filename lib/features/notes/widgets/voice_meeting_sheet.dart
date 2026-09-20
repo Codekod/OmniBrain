@@ -12,6 +12,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
 import 'package:omnibrain_ai/core/providers/gemini_provider.dart';
 import 'package:omnibrain_ai/core/providers/revenuecat_provider.dart';
+import 'package:omnibrain_ai/core/services/meeting_export_service.dart';
 import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
 
 class VoiceMeetingSheet extends ConsumerStatefulWidget {
@@ -36,6 +37,7 @@ class _VoiceMeetingSheetState extends ConsumerState<VoiceMeetingSheet> {
   bool _isListening = false;
   bool _isSummarizing = false;
   String _recognizedText = '';
+  String? _generatedSummary;
   int _secondsRecorded = 0;
   Timer? _recordingTimer;
 
@@ -93,8 +95,8 @@ class _VoiceMeetingSheetState extends ConsumerState<VoiceMeetingSheet> {
       listenOptions: stt.SpeechListenOptions(
         listenMode: stt.ListenMode.dictation,
         partialResults: true,
+        localeId: 'tr_TR',
       ),
-      localeId: 'tr_TR',
       onResult: (result) {
         if (mounted) {
           setState(() {
@@ -155,14 +157,10 @@ Konuşma Metni:
 
       HapticFeedback.heavyImpact();
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 Toplantı AI ile özetlendi ve Notlarıma kaydedildi!'),
-            backgroundColor: AppColors.softGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() {
+          _isSummarizing = false;
+          _generatedSummary = summary;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -270,125 +268,246 @@ Konuşma Metni:
                 ],
               ),
 
-              const SizedBox(height: 28),
-
-              // Recording Pulsing Circle & Timer
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_isListening)
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.coralRed.withValues(alpha: 0.15),
-                      ),
-                    ).animate(onPlay: (c) => c.repeat(reverse: true))
-                     .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1200.ms),
-                  GestureDetector(
-                    onTap: () {
-                      if (_isListening) {
-                        _stopRecording();
-                      } else {
-                        _startRecording();
-                      }
-                    },
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isListening ? AppColors.coralRed : AppColors.iceBlue,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isListening ? AppColors.coralRed : AppColors.iceBlue).withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          )
-                        ],
-                      ),
-                      child: Icon(
-                        _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Text(
-                '$minutes:$seconds',
-                style: GoogleFonts.montserrat(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 1,
-                ),
-              ),
-              Text(
-                _isListening ? 'Kayıt yapılıyor, konuşun...' : 'Kayıt duraklatıldı',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: _isListening ? AppColors.softGreen : Colors.white54,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Transcript Preview Box
-              Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxHeight: 120),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    _recognizedText.isEmpty ? 'Sesiniz burada gerçek zamanlı yazıya dökülecek...' : _recognizedText,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: _recognizedText.isEmpty ? Colors.white30 : Colors.white70,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 24),
 
-              // Summarize & Save Action Button
-              if (_isSummarizing)
-                const Column(
-                  children: [
-                    CircularProgressIndicator(color: AppColors.neonPurple),
-                    SizedBox(height: 12),
-                    Text('Yapay Zekâ Toplantıyı Özetliyor...', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  ],
-                )
-              else
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.neonPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    shadowColor: AppColors.neonPurple.withValues(alpha: 0.4),
-                    elevation: 10,
+              if (_generatedSummary != null) ...[
+                // Success banner
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.softGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.softGreen.withValues(alpha: 0.3)),
                   ),
-                  icon: const Icon(Icons.auto_awesome, color: Colors.white),
-                  label: const Text(
-                    'Toplantıyı Özetle & Eylem Planı Çıkar',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: AppColors.softGreen, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Toplantı AI ile Özetlendi & Kaydedildi!',
+                        style: GoogleFonts.inter(
+                          color: AppColors.softGreen,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
-                  onPressed: _generateAiSummary,
                 ),
+                const SizedBox(height: 16),
+
+                // Summary preview container
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _generatedSummary!,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Export buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE11D48), // PDF Crimson
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 6,
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 20),
+                        label: Text(
+                          'PDF Paylaş',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                        ),
+                        onPressed: () {
+                          MeetingExportService.exportToPdf(
+                            context: context,
+                            ref: ref,
+                            title: 'Toplantı ve Eylem Planı',
+                            content: _generatedSummary!,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB), // Word Blue
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 6,
+                        ),
+                        icon: const Icon(Icons.description_rounded, color: Colors.white, size: 20),
+                        label: Text(
+                          'Word (.doc)',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                        ),
+                        onPressed: () {
+                          MeetingExportService.exportToWord(
+                            context: context,
+                            ref: ref,
+                            title: 'Toplantı ve Eylem Planı',
+                            content: _generatedSummary!,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Kapat ve Notlara Dön',
+                      style: GoogleFonts.inter(
+                        color: Colors.white60,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // Recording Pulsing Circle & Timer
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_isListening)
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.coralRed.withValues(alpha: 0.15),
+                        ),
+                      ).animate(onPlay: (c) => c.repeat(reverse: true))
+                       .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 1200.ms),
+                    GestureDetector(
+                      onTap: () {
+                        if (_isListening) {
+                          _stopRecording();
+                        } else {
+                          _startRecording();
+                        }
+                      },
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isListening ? AppColors.coralRed : AppColors.iceBlue,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isListening ? AppColors.coralRed : AppColors.iceBlue).withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                Text(
+                  '$minutes:$seconds',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1,
+                  ),
+                ),
+                Text(
+                  _isListening ? 'Kayıt yapılıyor, konuşun...' : 'Kayıt duraklatıldı',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: _isListening ? AppColors.softGreen : Colors.white54,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Transcript Preview Box
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _recognizedText.isEmpty ? 'Sesiniz burada gerçek zamanlı yazıya dökülecek...' : _recognizedText,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: _recognizedText.isEmpty ? Colors.white30 : Colors.white70,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Summarize & Save Action Button
+                if (_isSummarizing)
+                  const Column(
+                    children: [
+                      CircularProgressIndicator(color: AppColors.neonPurple),
+                      SizedBox(height: 12),
+                      Text('Yapay Zekâ Toplantıyı Özetliyor...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    ],
+                  )
+                else
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shadowColor: AppColors.neonPurple.withValues(alpha: 0.4),
+                      elevation: 10,
+                    ),
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                    label: const Text(
+                      'Toplantıyı Özetle & Eylem Planı Çıkar',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    onPressed: _generateAiSummary,
+                  ),
+              ],
             ],
           ),
         ),
