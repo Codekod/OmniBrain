@@ -15,7 +15,7 @@ class SmartToolGrid extends StatelessWidget {
       _ToolDef(l10n.toolCalculate, Icons.calculate_rounded, AppColors.neonPurple,
           '/smart_calculator'),
       _ToolDef(l10n.toolScan, Icons.document_scanner_rounded, AppColors.iceBlue,
-          '/smart_calculator'),
+          '/document_scanner'),
       _ToolDef(
           l10n.toolPomodoro, Icons.timer_rounded, AppColors.softGreen, '/pomodoro'),
       _ToolDef(

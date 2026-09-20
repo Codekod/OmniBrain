@@ -188,8 +188,15 @@ class DashboardScreen extends ConsumerWidget {
       child: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: Colors.transparent,
-            floating: true,
+            backgroundColor: AppColors.deepNightBlue.withValues(alpha: 0.85),
+            pinned: true,
+            elevation: 0,
+            flexibleSpace: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
             title: ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
                 colors: [AppColors.neonPurple, AppColors.iceBlue],
@@ -239,6 +246,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
@@ -256,7 +264,7 @@ class DashboardScreen extends ConsumerWidget {
           const SliverToBoxAdapter(
             child: FocusZone(),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );

@@ -1,22 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
-import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
-import 'package:omnibrain_ai/core/widgets/omnibrain_camera_view.dart';
-import 'package:omnibrain_ai/features/ai_command/widgets/chat_bubble.dart';
-import 'package:omnibrain_ai/core/models/chat_message.dart';
-import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 
 class SmartCalculatorScreen extends ConsumerStatefulWidget {
@@ -27,17 +18,22 @@ class SmartCalculatorScreen extends ConsumerStatefulWidget {
 }
 
 class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
-  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ImagePicker _imagePicker = ImagePicker();
 
   bool _isLoading = false;
-  final List<Map<String, dynamic>> _chatHistory = [];
-  bool _isCameraOpen = false;
-
-  // Speech to text
   late stt.SpeechToText _speech;
   bool _isListening = false;
+
+  final List<Map<String, String>> _calculations = [];
+
+  final List<String> _quickMathShortcuts = [
+    "%20 KDV Ekle",
+    "%20 KDV Çıkar",
+    "Yüzde Hesapla",
+    "Hesabı 4 Kişiye Böl",
+    "Kredi Aylık Taksiti",
+  ];
 
   @override
   void initState() {
@@ -47,161 +43,49 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    _inputController.dispose();
     _scrollController.dispose();
     _speech.stop();
     super.dispose();
   }
 
-  Future<void> _processMessage(String message, {String? displayUserMessage}) async {
-    if (_isListening) {
-      _speech.stop();
-      setState(() => _isListening = false);
-    }
+  Future<void> _processCalculation(String expression) async {
+    final query = expression.trim();
+    if (query.isEmpty) return;
 
-    if (message.trim().isEmpty) return;
-
-    final userMessage = message;
-    _textController.clear();
+    _inputController.clear();
     FocusScope.of(context).unfocus();
 
     setState(() {
-      _chatHistory.add({'type': 'user', 'text': displayUserMessage ?? userMessage});
       _isLoading = true;
+      _calculations.add({'type': 'user', 'content': query});
     });
-
     _scrollToBottom();
 
     try {
       final aiRepo = ref.read(aiCommandRepositoryProvider);
-      final responseJson = await aiRepo.processTextCalculation(userMessage);
+      final answer = await aiRepo.processTextCalculation(query);
 
-      try {
-        final cleanJson = responseJson.replaceAll('```json', '').replaceAll('```', '').trim();
-        final parsedData = jsonDecode(cleanJson);
-
-        setState(() {
-          if (parsedData.containsKey('error')) {
-            _chatHistory.add({'type': 'ai_error', 'text': parsedData['error']});
-          } else {
-            _chatHistory.add({'type': 'ai_receipt', 'data': parsedData});
-          }
-          _isLoading = false;
-        });
-      } catch (_) {
-        // If not JSON, it's markdown text (e.g. math solution)
-        setState(() {
-          _chatHistory.add({'type': 'ai_text', 'text': responseJson});
-          _isLoading = false;
-        });
-      }
-      _scrollToBottom();
-    } catch (e) {
       setState(() {
-        _chatHistory.add({'type': 'ai_error', 'text': 'Sistemsel bir hata oluştu: $e'});
+        _calculations.add({'type': 'ai', 'content': answer});
         _isLoading = false;
       });
       _scrollToBottom();
-    }
-  }
-
-  void _openCamera() {
-    HapticFeedback.lightImpact();
-    setState(() => _isCameraOpen = true);
-  }
-
-  void _closeCamera() {
-    setState(() => _isCameraOpen = false);
-  }
-
-  Future<void> _pickFromGallery() async {
-    HapticFeedback.lightImpact();
-    try {
-      final XFile? pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 90,
-      );
-      if (pickedFile != null) {
-        _processImage(pickedFile.path);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Galeriden görsel seçilemedi: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _processImage(String imagePath) async {
-    _closeCamera();
-    setState(() {
-      _isLoading = true;
-      _chatHistory.add({'type': 'user', 'text': '📷 Görsel analiz ediliyor...'});
-    });
-    _scrollToBottom();
-
-    try {
-      final aiRepo = ref.read(aiCommandRepositoryProvider);
-
-      // 1. Direct Multimodal Gemini Vision (Best accuracy)
-      final visionResult = await aiRepo.processImageCalculation(imagePath);
-      final cleanResult = visionResult.replaceAll('```json', '').replaceAll('```', '').trim();
-
-      try {
-        final parsed = jsonDecode(cleanResult);
-        if (parsed is Map<String, dynamic>) {
-          if (parsed.containsKey('error')) {
-            // If Vision couldn't read, try ML Kit OCR fallback
-            await _runOcrFallback(imagePath);
-            return;
-          }
-          setState(() {
-            _chatHistory.add({'type': 'ai_receipt', 'data': parsed});
-            _isLoading = false;
-          });
-          _scrollToBottom();
-          return;
-        }
-      } catch (_) {
-        // Returned markdown explanation (math problem solved from photo)
-        setState(() {
-          _chatHistory.add({'type': 'ai_text', 'text': visionResult});
-          _isLoading = false;
-        });
-        _scrollToBottom();
-        return;
-      }
-    } catch (_) {
-      // If Gemini Vision fails (e.g. network), fallback to ML Kit OCR
-      await _runOcrFallback(imagePath);
-    }
-  }
-
-  Future<void> _runOcrFallback(String imagePath) async {
-    try {
-      final ocrRepo = ref.read(ocrRepositoryProvider);
-      final rawText = await ocrRepo.processImage(imagePath);
-
-      if (rawText.isEmpty || rawText.startsWith('Metin okunamadı')) {
-        throw Exception('Görselde okunabilir bir metin bulunamadı. Lütfen daha net ve aydınlık bir fotoğraf çekin.');
-      }
-
-      await _processMessage(rawText, displayUserMessage: '📷 Belge metni çözümlendi.');
+      HapticFeedback.lightImpact();
     } catch (e) {
       setState(() {
+        _calculations.add({'type': 'error', 'content': 'Hesaplanamadı: $e'});
         _isLoading = false;
-        _chatHistory.add({'type': 'ai_error', 'text': 'Tarama hatası: $e'});
       });
       _scrollToBottom();
     }
   }
 
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          _scrollController.position.maxScrollExtent + 120,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -214,26 +98,19 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
     if (_isListening) {
       setState(() => _isListening = false);
       _speech.stop();
-      if (_textController.text.isNotEmpty) {
-        _processMessage(_textController.text);
+      if (_inputController.text.isNotEmpty) {
+        _processCalculation(_inputController.text);
       }
     } else {
       final status = await Permission.microphone.request();
-      if (status != PermissionStatus.granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mikrofon izni gerekli')),
-          );
-        }
-        return;
-      }
+      if (status != PermissionStatus.granted) return;
 
       final available = await _speech.initialize(
         onStatus: (val) {
           if (val == 'done' || val == 'notListening') {
             setState(() => _isListening = false);
-            if (_textController.text.isNotEmpty) {
-              _processMessage(_textController.text);
+            if (_inputController.text.isNotEmpty) {
+              _processCalculation(_inputController.text);
             }
           }
         },
@@ -243,58 +120,20 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          listenOptions: stt.SpeechListenOptions(
-            listenMode: stt.ListenMode.confirmation,
-          ),
+          listenOptions: stt.SpeechListenOptions(listenMode: stt.ListenMode.confirmation),
           localeId: 'tr_TR',
-          onResult: (val) => setState(() {
-            _textController.text = val.recognizedWords;
-          }),
+          onResult: (val) {
+            setState(() {
+              _inputController.text = val.recognizedWords;
+            });
+          },
         );
       }
     }
   }
 
-  void _saveReceiptToNotes(Map<String, dynamic> data) {
-    HapticFeedback.lightImpact();
-    final merchant = data['merchant'] ?? 'Harcama Fişi';
-    final total = data['totalExpense'] ?? data['balance'] ?? 0;
-    final dateStr = data['date'] != null && data['date'].toString().isNotEmpty
-        ? data['date']
-        : DateFormat('dd.MM.yyyy').format(DateTime.now());
-
-    final items = data['items'] as List<dynamic>? ?? [];
-    final itemsSummary = items.map((i) => "- ${i['label']}: ${i['amount']} ₺").join("\n");
-
-    final noteText = "$merchant ($dateStr)\nToplam: $total ₺\n$itemsSummary";
-
-    ref.read(notesProvider.notifier).addNote(noteText, category: 'Finans');
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: AppColors.softGreen, size: 20),
-            SizedBox(width: 8),
-            Text('Fiş [Finans] notlarınıza kaydedildi!'),
-          ],
-        ),
-        backgroundColor: AppColors.darkNavy,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_isCameraOpen) {
-      return OmniBrainCameraView(
-        onImageCaptured: _processImage,
-        onCancel: _closeCamera,
-      );
-    }
-
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -306,516 +145,273 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           title: Text(
-            'Akıllı Hesaplayıcı & OCR',
+            'Akıllı Hesaplayıcı',
             style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
+          centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.photo_library_outlined, color: AppColors.iceBlue),
-              tooltip: 'Galeriden Fiş Seç',
-              onPressed: _pickFromGallery,
-            ),
-            IconButton(
-              icon: const Icon(Icons.camera_alt_outlined, color: AppColors.iceBlue),
-              tooltip: 'Kamera ile Tara',
-              onPressed: _openCamera,
-            ),
+            if (_calculations.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white54),
+                tooltip: 'Temizle',
+                onPressed: () {
+                  setState(() => _calculations.clear());
+                },
+              ),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: _chatHistory.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.neonPurple.withValues(alpha: 0.25),
-                                    AppColors.iceBlue.withValues(alpha: 0.25),
-                                  ],
-                                ),
-                                border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
-                              ),
-                              child: const Icon(
-                                Icons.document_scanner_rounded,
-                                size: 52,
-                                color: AppColors.iceBlue,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              "Fiş Tara veya Soru Sor",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              "Kamerayı açarak bir market fişi veya fatura tara;\nkalem kalem harcamalarını, KDV'yi ve toplamı hesaplayalım.",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.neonPurple,
-                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                  icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
-                                  label: const Text('Kamera ile Tara', style: TextStyle(color: Colors.white)),
-                                  onPressed: _openCamera,
-                                ),
-                                const SizedBox(width: 12),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                  icon: const Icon(Icons.photo_library_rounded, color: AppColors.iceBlue, size: 20),
-                                  label: const Text('Galeriden Seç', style: TextStyle(color: Colors.white)),
-                                  onPressed: _pickFromGallery,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ).animate().fadeIn(),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Shortcut chips
+              SizedBox(
+                height: 38,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _quickMathShortcuts.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final label = _quickMathShortcuts[index];
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        _inputController.text = "$label: ";
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.neonPurple.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary),
+                        ),
                       ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: _chatHistory.length,
-                      itemBuilder: (context, index) {
-                        final item = _chatHistory[index];
-                        if (item['type'] == 'user') {
-                          return _buildUserBubble(item['text']);
-                        } else if (item['type'] == 'ai_receipt') {
-                          return _buildReceiptCard(item['data']);
-                        } else if (item['type'] == 'ai_text') {
-                          return ChatBubble(
-                            message: ChatMessage(
-                              id: DateTime.now().toString(),
-                              role: MessageRole.ai,
-                              text: item['text'],
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Chat / Calculation History Area
+              Expanded(
+                child: _calculations.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(22),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.neonPurple.withValues(alpha: 0.2),
+                                  border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
+                                ),
+                                child: const Icon(
+                                  Icons.calculate_rounded,
+                                  size: 50,
+                                  color: AppColors.neonPurple,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                "Matematik & Akıllı Hesaplama",
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                "İster formül yaz (450 * 1.20), ister doğal dille sor;\n'1500 liralık yemeğin %10 bahşişi ve 3 kişiye payı ne kadar?'",
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ).animate().fadeIn(),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: _calculations.length,
+                        itemBuilder: (context, index) {
+                          final item = _calculations[index];
+                          final isUser = item['type'] == 'user';
+                          final isError = item['type'] == 'error';
+
+                          if (isUser) {
+                            return Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12, left: 60),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.neonPurple.withValues(alpha: 0.25),
+                                  border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.5)),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(18),
+                                    topRight: Radius.circular(18),
+                                    bottomLeft: Radius.circular(18),
+                                    bottomRight: Radius.circular(4),
+                                  ),
+                                ),
+                                child: Text(
+                                  item['content']!,
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 14, right: 40),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isError
+                                    ? AppColors.coralRed.withValues(alpha: 0.15)
+                                    : AppColors.darkNavy,
+                                border: Border.all(
+                                  color: isError
+                                      ? AppColors.coralRed.withValues(alpha: 0.4)
+                                      : AppColors.iceBlue.withValues(alpha: 0.3),
+                                ),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(18),
+                                  topRight: Radius.circular(18),
+                                  bottomLeft: Radius.circular(4),
+                                  bottomRight: Radius.circular(18),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isError ? Icons.error_outline : Icons.auto_awesome,
+                                        color: isError ? AppColors.coralRed : AppColors.iceBlue,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isError ? "Hata" : "Sonuç",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isError ? AppColors.coralRed : AppColors.iceBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    item['content']!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
-                        } else {
-                          return _buildErrorBubble(item['text']);
-                        }
-                      },
-                    ),
-            ),
-            if (_isLoading) _buildLoadingIndicator(),
-            _buildInputArea(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0, left: 16.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Shimmer.fromColors(
-          baseColor: AppColors.neonPurple,
-          highlightColor: AppColors.iceBlue,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'Yapay zeka analiz ediyor...',
-                style: AppTextStyles.bodyText.copyWith(fontWeight: FontWeight.bold),
+                        },
+                      ),
               ),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn();
-  }
 
-  Widget _buildUserBubble(String text) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16, left: 50),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.5), width: 1),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(4),
-          ),
-        ),
-        child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 15)),
-      ),
-    ).animate().slideX(begin: 0.2, end: 0).fadeIn();
-  }
-
-  Widget _buildErrorBubble(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16, right: 50),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.coralRed.withValues(alpha: 0.15),
-          border: Border.all(color: AppColors.coralRed.withValues(alpha: 0.5)),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-            bottomLeft: Radius.circular(4),
-          ),
-        ),
-        child: Text(text, style: const TextStyle(color: AppColors.coralRed, fontSize: 14)),
-      ),
-    ).animate().slideX(begin: -0.2, end: 0).fadeIn();
-  }
-
-  Widget _buildReceiptCard(Map<String, dynamic> data) {
-    final merchant = data['merchant'] as String?;
-    final date = data['date'] as String?;
-    final tax = data['tax'];
-    final items = data['items'] as List<dynamic>? ?? [];
-    final totalExpense = data['totalExpense'] ?? 0;
-    final totalIncome = data['totalIncome'] ?? 0;
-    final balance = data['balance'] ?? 0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24, right: 10),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 12,
-            spreadRadius: 1,
-          )
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Merchant & Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.receipt_long, color: AppColors.iceBlue, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    merchant != null && merchant.isNotEmpty ? merchant : 'Hesap Özeti',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: AppColors.neonPurple, strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Text("Hesaplanıyor...", style: TextStyle(color: AppColors.neonPurple.withValues(alpha: 0.8), fontSize: 12)),
+                    ],
                   ),
-                ],
-              ),
-              if (date != null && date.isNotEmpty)
-                Text(
-                  date,
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
-          // Items List
-          if (items.isNotEmpty) ...[
-            ...items.map((item) {
-              final isIncome = item['type'] == 'income';
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5.0),
+              // Bottom Math Command Bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.deepNightBlue,
+                  border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    IconButton(
+                      icon: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening ? AppColors.coralRed : AppColors.iceBlue,
+                      ),
+                      onPressed: _toggleListening,
+                    ),
                     Expanded(
-                      child: Text(
-                        item['label'] ?? '',
-                        style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-                        overflow: TextOverflow.ellipsis,
+                      child: TextField(
+                        controller: _inputController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: _isListening ? "Dinliyorum..." : "Formül veya soru yaz (Örn: 1500 * 0.18)",
+                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.darkNavy,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: _processCalculation,
                       ),
                     ),
-                    Text(
-                      '${isIncome ? '+' : '-'}${item['amount']} ₺',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: isIncome ? AppColors.softGreen : AppColors.coralRed,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => _processCalculation(_inputController.text),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(colors: [AppColors.neonPurple, AppColors.iceBlue]),
+                        ),
+                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                       ),
                     ),
                   ],
                 ),
-              );
-            }),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Divider(color: Colors.white24),
-            ),
-          ],
-
-          if (tax != null && tax != 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('KDV / Vergi', style: GoogleFonts.inter(fontSize: 13, color: Colors.white60)),
-                  Text('$tax ₺', style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
-                ],
-              ),
-            ),
-
-          _buildSummaryRow('Toplam Gelir', totalIncome, AppColors.softGreen),
-          _buildSummaryRow('Toplam Gider', totalExpense, AppColors.coralRed),
-          const SizedBox(height: 12),
-
-          // Balance Card
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: balance >= 0
-                  ? AppColors.softGreen.withValues(alpha: 0.12)
-                  : AppColors.coralRed.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: balance >= 0
-                    ? AppColors.softGreen.withValues(alpha: 0.35)
-                    : AppColors.coralRed.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Genel Toplam',
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                Text(
-                  '${balance > 0 ? '+' : ''}$balance ₺',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: balance >= 0 ? AppColors.softGreen : AppColors.coralRed,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Action Buttons: Save to Notes & Copy
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.neonPurple.withValues(alpha: 0.2),
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: AppColors.neonPurple.withValues(alpha: 0.5)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  icon: const Icon(Icons.bookmark_add_rounded, size: 18, color: AppColors.iceBlue),
-                  label: const Text('Notlarıma Kaydet', style: TextStyle(fontSize: 13)),
-                  onPressed: () => _saveReceiptToNotes(data),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton(
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.08),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.copy_rounded, color: Colors.white70, size: 18),
-                tooltip: 'Kopyala',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  final summary = "Fiş: ${merchant ?? ''}\nToplam: $totalExpense ₺\nBakiye: $balance ₺";
-                  Clipboard.setData(ClipboardData(text: summary));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Hesap özeti kopyalandı!'), duration: Duration(seconds: 1)),
-                  );
-                },
               ),
             ],
           ),
-        ],
-      ),
-    ).animate().scale(delay: 100.ms).fadeIn();
-  }
-
-  Widget _buildSummaryRow(String label, dynamic amount, Color color) {
-    if (amount == 0 || amount == 0.0) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
-          Text('$amount ₺', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(
-        bottom: MediaQuery.of(context).padding.bottom + 12,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.deepNightBlue.withValues(alpha: 0.95),
-        border: const Border(top: BorderSide(color: Colors.white10)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            offset: const Offset(0, -4),
-            blurRadius: 10,
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          // Gallery Button
-          GestureDetector(
-            onTap: _pickFromGallery,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: const Icon(Icons.photo_library_rounded, color: AppColors.iceBlue, size: 22),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Camera Button
-          GestureDetector(
-            onTap: _openCamera,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.neonPurple.withValues(alpha: 0.15),
-                border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
-              ),
-              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Text Field
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: _isListening ? "Dinliyorum..." : "Yaz, sor veya fiş tara...",
-                hintStyle: TextStyle(
-                  color: _isListening ? AppColors.coralRed : Colors.white38,
-                  fontSize: 14,
-                ),
-                filled: true,
-                fillColor: AppColors.darkNavy,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: Colors.white10),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: Colors.white10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: AppColors.neonPurple.withValues(alpha: 0.5)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              onSubmitted: (val) => _processMessage(val),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Mic Button
-          GestureDetector(
-            onTap: _toggleListening,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isListening ? AppColors.coralRed.withValues(alpha: 0.2) : Colors.transparent,
-                border: Border.all(
-                  color: _isListening ? AppColors.coralRed : Colors.white24,
-                ),
-              ),
-              child: Icon(
-                _isListening ? Icons.mic : Icons.mic_none,
-                color: _isListening ? AppColors.coralRed : Colors.white,
-                size: 22,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Send Button
-          GestureDetector(
-            onTap: () {
-              if (_textController.text.isNotEmpty) {
-                _processMessage(_textController.text);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.neonPurple, AppColors.iceBlue],
-                ),
-              ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

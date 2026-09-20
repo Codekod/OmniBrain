@@ -103,7 +103,7 @@ class _AiCommandBarState extends ConsumerState<AiCommandBar> {
 
   void _openScanner() {
     HapticFeedback.lightImpact();
-    context.push('/smart_calculator');
+    context.push('/document_scanner');
   }
 
   @override

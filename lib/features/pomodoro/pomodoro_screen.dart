@@ -18,9 +18,23 @@ class PomodoroScreen extends ConsumerStatefulWidget {
   ConsumerState<PomodoroScreen> createState() => _PomodoroScreenState();
 }
 
-class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
+class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _taskController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(pomodoroProvider.notifier).syncFromBackground();
+    }
+  }
 
   Future<void> _askAiForSuggestion() async {
     final task = _taskController.text.trim();
@@ -54,6 +68,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _taskController.dispose();
     super.dispose();
   }
@@ -99,9 +114,12 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.neonPurple.withValues(alpha: 0.15),
+                    color: AppColors.softGreen.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.softGreen.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -110,10 +128,10 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '${pomodoroState.completedSessionsToday} Seans',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.montserrat(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.softGreen,
                         ),
                       ),
                     ],
@@ -128,7 +146,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
             children: [
               // AI Task duration coach
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
@@ -145,7 +163,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
                           controller: _taskController,
                           style: const TextStyle(color: Colors.white, fontSize: 13),
                           decoration: const InputDecoration(
-                            hintText: "Ne yapacaksın? AI süre önersin (Örn: Kod yazacağım)",
+                            hintText: "Ne yapacaksın? AI süre önersin...",
                             hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
                             border: InputBorder.none,
                           ),
@@ -274,6 +292,30 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
+                        )
+                      else if (pomodoroState.isRunning)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              pomodoroState.isBreak ? "DİNLENME" : "ODAKLANILIYOR",
+                              style: GoogleFonts.inter(
+                                color: primaryColor,
+                                letterSpacing: 1.5,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),
@@ -335,11 +377,11 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
 
               const Spacer(),
 
-              // AI Motivation or Guidance Message
+              // Session Status Message (Clean, non-redundant)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(16),
@@ -347,18 +389,26 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.tips_and_updates_rounded, color: AppColors.amber, size: 20),
+                      Icon(
+                        pomodoroState.isBreak ? Icons.coffee_rounded : Icons.flare_rounded,
+                        color: pomodoroState.isBreak ? AppColors.softGreen : AppColors.amber,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          pomodoroState.message,
-                          style: AppTextStyles.bodyText.copyWith(color: Colors.white, fontSize: 13),
+                          pomodoroState.isRunning
+                              ? (pomodoroState.isBreak
+                                  ? "Gözlerini dinlendir, derin nefes al..."
+                                  : "Odaklanma aktif. Süre bitince seni sesle uyaracağız 🔔")
+                              : pomodoroState.message,
+                          style: AppTextStyles.bodyText.copyWith(color: Colors.white70, fontSize: 13),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ).animate().fadeIn(duration: 500.ms),
+              ).animate().fadeIn(duration: 400.ms),
             ],
           ),
         ),
@@ -380,32 +430,35 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
         onTap: () {
           HapticFeedback.selectionClick();
           if (isBreakPreset) {
-            notifier.skipSession();
+            notifier.setPresetDuration(focus, breakMins, title);
           } else {
             notifier.setPresetDuration(focus, breakMins, title);
           }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.neonPurple.withValues(alpha: 0.25)
+                ? (isBreakPreset ? AppColors.softGreen.withValues(alpha: 0.25) : AppColors.neonPurple.withValues(alpha: 0.25))
                 : Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppColors.neonPurple : Colors.white10,
+              color: isSelected
+                  ? (isBreakPreset ? AppColors.softGreen : AppColors.neonPurple)
+                  : Colors.white.withValues(alpha: 0.1),
               width: isSelected ? 1.5 : 1,
             ),
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-              ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected
+                  ? (isBreakPreset ? AppColors.softGreen : Colors.white)
+                  : AppColors.textSecondary,
             ),
           ),
         ),
@@ -421,12 +474,12 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 50,
-        height: 50,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.darkNavy,
-          border: Border.all(color: Colors.white10),
+          color: Colors.white.withValues(alpha: 0.08),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Icon(icon, color: color, size: 24),
       ),

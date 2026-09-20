@@ -11,6 +11,7 @@ import 'package:omnibrain_ai/features/pomodoro/pomodoro_screen.dart';
 import 'package:omnibrain_ai/features/converter/converter_screen.dart';
 import 'package:omnibrain_ai/features/notes/note_detail_screen.dart';
 import 'package:omnibrain_ai/features/smart_calculator/smart_calculator_screen.dart';
+import 'package:omnibrain_ai/features/document_scanner/document_scanner_screen.dart';
 import 'package:omnibrain_ai/features/paywall/paywall_screen.dart';
 import 'package:omnibrain_ai/features/reminders/reminders_screen.dart';
 import 'package:omnibrain_ai/presentation/widgets/bottom_nav_bar.dart';
@@ -30,6 +31,7 @@ abstract final class RoutePaths {
   static const String paywall = '/paywall';
 
   static const String smartCalculator = '/smart_calculator';
+  static const String documentScanner = '/document_scanner';
   static const String pomodoro = '/pomodoro';
   static const String converter = '/converter';
   static const String reminders = '/reminders';
@@ -319,6 +321,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const SmartCalculatorScreen(),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.documentScanner,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => _fadeSlideTransition(
+          context: context,
+          state: state,
+          child: const DocumentScannerScreen(),
         ),
       ),
       GoRoute(

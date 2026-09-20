@@ -388,6 +388,24 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
               ),
             ],
           ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.neonPurple.withValues(alpha: 0.25),
+                    border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.5)),
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                ),
+                tooltip: 'Yeni Not Ekle',
+                onPressed: () => _showAddOrEditNoteDialog(),
+              ),
+            ),
+          ],
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: AppColors.neonPurple,
@@ -411,12 +429,17 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
             _buildAiChatTab(),
           ],
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         floatingActionButton: _tabController.index == 0
-            ? FloatingActionButton(
-                backgroundColor: AppColors.neonPurple,
-                elevation: 4,
-                onPressed: () => _showAddOrEditNoteDialog(),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: 84.0),
+                child: FloatingActionButton.extended(
+                  backgroundColor: AppColors.neonPurple,
+                  elevation: 6,
+                  onPressed: () => _showAddOrEditNoteDialog(),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                  label: const Text('Yeni Not', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
               )
             : null,
       ),
@@ -832,7 +855,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
 
   Widget _buildChatInputArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       decoration: BoxDecoration(
         color: AppColors.deepNightBlue,
         border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),

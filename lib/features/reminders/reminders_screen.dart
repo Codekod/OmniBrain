@@ -614,13 +614,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen>
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _showAddReminderDialog,
-          backgroundColor: AppColors.neonPurple,
-          icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: const Text(
-            'Yeni Hatırlatıcı',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 12.0, right: 4.0),
+          child: FloatingActionButton.extended(
+            onPressed: _showAddReminderDialog,
+            backgroundColor: AppColors.neonPurple,
+            elevation: 4,
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text(
+              'Yeni Hatırlatıcı',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         body: remindersAsync.when(
