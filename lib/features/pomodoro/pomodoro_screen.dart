@@ -15,6 +15,8 @@ import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/features/pomodoro/providers/pomodoro_providers.dart';
 import 'package:omnibrain_ai/features/pomodoro/widgets/ambient_visual_layer.dart';
 import 'package:omnibrain_ai/features/pomodoro/widgets/focus_tree_view.dart';
+import 'package:omnibrain_ai/features/pomodoro/widgets/forest_garden_sheet.dart';
+import 'package:omnibrain_ai/features/pomodoro/widgets/zen_focus_mode_view.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 
 class PomodoroScreen extends ConsumerStatefulWidget {
@@ -28,7 +30,6 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
     with WidgetsBindingObserver {
   final TextEditingController _taskController = TextEditingController();
   bool _isLoading = false;
-  FocusTreeType _selectedTreeType = FocusTreeType.pine;
 
   @override
   void initState() {
@@ -114,34 +115,49 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
           ),
           centerTitle: true,
           actions: [
+            // Zen Mode button
+            IconButton(
+              icon: const Icon(Icons.fullscreen_rounded, color: AppColors.iceBlue),
+              tooltip: 'Zen Modu',
+              onPressed: () => ZenFocusModeView.open(context),
+            ),
+            // Forest Garden Sheet button
+            IconButton(
+              icon: const Icon(Icons.park_rounded, color: AppColors.softGreen),
+              tooltip: 'Bugünkü Ormanım',
+              onPressed: () => ForestGardenSheet.show(context),
+            ),
             // Daily session count pill
             Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 12),
               child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.softGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.softGreen.withValues(alpha: 0.35),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check_circle_rounded, color: AppColors.softGreen, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${pomodoroState.completedSessionsToday} Seans',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.softGreen,
-                        ),
+                child: GestureDetector(
+                  onTap: () => ForestGardenSheet.show(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.softGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.softGreen.withValues(alpha: 0.35),
+                        width: 1,
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.eco_rounded, color: AppColors.softGreen, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${pomodoroState.completedSessionsToday} Ağaç',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.softGreen,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -245,8 +261,14 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                     ),
                   ),
 
+                  // Category Selector Chips
+                  _buildCategorySelector(pomodoroState.selectedCategory, notifier),
+
                   // Focus Tree Selector Chips (Pine, Sakura, Bonsai)
-                  _buildTreeTypeSelector(ref.watch(isProProvider)),
+                  _buildTreeTypeSelector(pomodoroState.selectedTreeType, ref.watch(isProProvider), notifier),
+
+                  // 4-Round Pomodoro Cycle Indicator
+                  _buildCycleIndicator(pomodoroState),
 
                   const Spacer(),
 
@@ -269,7 +291,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                     ),
                   ).animate(target: pomodoroState.isRunning ? 1 : 0).shimmer(duration: 2.seconds),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Circular Countdown Timer with Animated Focus Tree
                   Stack(
@@ -295,7 +317,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                                 : 0.0,
                             isRunning: pomodoroState.isRunning,
                             isBreak: pomodoroState.isBreak,
-                            treeType: _selectedTreeType,
+                            treeType: pomodoroState.selectedTreeType,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -507,7 +529,113 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
     }
   }
 
-  Widget _buildTreeTypeSelector(bool isPro) {
+  Widget _buildCategorySelector(FocusCategory selectedCategory, PomodoroNotifier notifier) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: FocusCategory.values.map((cat) {
+            final isSelected = cat == selectedCategory;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  notifier.setCategory(cat);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isSelected ? cat.color.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected ? cat.color : Colors.white.withValues(alpha: 0.08),
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(cat.icon, size: 12, color: isSelected ? cat.color : Colors.white60),
+                      const SizedBox(width: 5),
+                      Text(
+                        cat.label,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? Colors.white : Colors.white60,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCycleIndicator(PomodoroState state) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: List.generate(state.totalRounds, (index) {
+              final roundNum = index + 1;
+              final isPassed = roundNum < state.currentRound;
+              final isCurrent = roundNum == state.currentRound;
+
+              Color dotColor;
+              if (isPassed) {
+                dotColor = AppColors.softGreen;
+              } else if (isCurrent) {
+                dotColor = state.isBreak ? AppColors.softGreen : AppColors.neonPurple;
+              } else {
+                dotColor = Colors.white24;
+              }
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isCurrent ? 14 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: dotColor,
+                  boxShadow: isCurrent
+                      ? [
+                          BoxShadow(
+                            color: dotColor.withValues(alpha: 0.6),
+                            blurRadius: 6,
+                          )
+                        ]
+                      : null,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            state.isLongBreak
+                ? '🎉 15 dk Uzun Mola!'
+                : 'Döngü ${state.currentRound}/${state.totalRounds}',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreeTypeSelector(FocusTreeType currentType, bool isPro, PomodoroNotifier notifier) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Row(
@@ -518,6 +646,8 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
             label: '🌲 Çam',
             isProOnly: false,
             isPro: isPro,
+            currentType: currentType,
+            notifier: notifier,
           ),
           const SizedBox(width: 8),
           _buildTreeChip(
@@ -525,6 +655,8 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
             label: '🌸 Sakura',
             isProOnly: true,
             isPro: isPro,
+            currentType: currentType,
+            notifier: notifier,
           ),
           const SizedBox(width: 8),
           _buildTreeChip(
@@ -532,6 +664,8 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
             label: '🪴 Bonsai',
             isProOnly: true,
             isPro: isPro,
+            currentType: currentType,
+            notifier: notifier,
           ),
         ],
       ),
@@ -543,8 +677,10 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
     required String label,
     required bool isProOnly,
     required bool isPro,
+    required FocusTreeType currentType,
+    required PomodoroNotifier notifier,
   }) {
-    final isSelected = _selectedTreeType == type;
+    final isSelected = currentType == type;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -552,7 +688,7 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
           context.push(RoutePaths.paywall);
           return;
         }
-        setState(() => _selectedTreeType = type);
+        notifier.setTreeType(type);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -797,6 +933,40 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
               }).toList(),
             ),
           ),
+          if (ambientState.isPlaying) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.volume_down_rounded, color: Colors.white38, size: 16),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.iceBlue,
+                      inactiveTrackColor: Colors.white12,
+                      thumbColor: AppColors.iceBlue,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                      trackHeight: 3,
+                    ),
+                    child: Slider(
+                      value: ambientState.volume,
+                      min: 0.0,
+                      max: 1.0,
+                      onChanged: (val) {
+                        ref.read(ambientSoundProvider.notifier).setVolume(val);
+                      },
+                    ),
+                  ),
+                ),
+                const Icon(Icons.volume_up_rounded, color: Colors.white70, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '${(ambientState.volume * 100).round()}%',
+                  style: GoogleFonts.inter(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
