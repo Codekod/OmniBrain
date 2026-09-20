@@ -14,6 +14,7 @@ import 'package:omnibrain_ai/features/smart_calculator/smart_calculator_screen.d
 import 'package:omnibrain_ai/features/document_scanner/document_scanner_screen.dart';
 import 'package:omnibrain_ai/features/paywall/paywall_screen.dart';
 import 'package:omnibrain_ai/features/reminders/reminders_screen.dart';
+import 'package:omnibrain_ai/domain/entities/note.dart';
 import 'package:omnibrain_ai/presentation/widgets/bottom_nav_bar.dart';
 import 'package:omnibrain_ai/core/providers/shared_prefs_provider.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
@@ -354,10 +355,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.noteDetail,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) {
+          final note = state.extra is Note ? state.extra as Note : null;
+          final noteId = state.pathParameters['id'];
           return _fadeSlideTransition(
             context: context,
             state: state,
-            child: const NoteDetailScreen(),
+            child: NoteDetailScreen(
+              note: note,
+              noteId: noteId,
+            ),
           );
         },
       ),

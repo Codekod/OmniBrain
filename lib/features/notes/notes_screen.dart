@@ -1,13 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/routing/app_router.dart';
 import 'package:omnibrain_ai/core/services/meeting_export_service.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/domain/entities/note.dart';
@@ -44,25 +47,50 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
 
   final List<String> _categories = [
     'Tümü',
-    'Genel',
+    'Toplantı',
+    'Ders & Eğitim',
     'İş',
-    'Kişisel',
-    'Fikirler',
     'Finans',
+    'Fikirler',
+    'Kişisel',
+    'Genel',
   ];
 
   Color _getCategoryColor(String category) {
     switch (category) {
-      case 'İş':
+      case 'Toplantı':
         return AppColors.iceBlue;
-      case 'Kişisel':
+      case 'Ders & Eğitim':
+        return AppColors.amber;
+      case 'İş':
+        return const Color(0xFF38BDF8);
+      case 'Finans':
         return AppColors.softGreen;
       case 'Fikirler':
-        return AppColors.amber;
-      case 'Finans':
-        return AppColors.coralRed;
+        return const Color(0xFFA855F7);
+      case 'Kişisel':
+        return const Color(0xFFF43F5E);
       default:
         return AppColors.neonPurple;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Toplantı':
+        return Icons.groups_rounded;
+      case 'Ders & Eğitim':
+        return Icons.school_rounded;
+      case 'İş':
+        return Icons.business_center_rounded;
+      case 'Finans':
+        return Icons.account_balance_wallet_rounded;
+      case 'Fikirler':
+        return Icons.lightbulb_rounded;
+      case 'Kişisel':
+        return Icons.person_rounded;
+      default:
+        return Icons.sticky_note_2_rounded;
     }
   }
 
@@ -119,8 +147,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
         _speech.listen(
           listenOptions: stt.SpeechListenOptions(
             listenMode: stt.ListenMode.confirmation,
+            localeId: 'tr_TR',
           ),
-          localeId: 'tr_TR',
           onResult: (val) {
             setState(() {
               _chatInputController.text = val.recognizedWords;
@@ -219,261 +247,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
     });
   }
 
-  void _showNoteExportSheet(BuildContext context, Note note) {
+
+
+  void _openNoteEditor({Note? existingNote}) {
     HapticFeedback.lightImpact();
-    final firstLine = note.content.split('\n').first.replaceAll(RegExp(r'^#+\s*'), '').trim();
-    final title = firstLine.isNotEmpty ? firstLine : 'Not_${note.category}';
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.deepNightBlue,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border.all(color: Colors.white12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Notu Dışa Aktar',
-              style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Kurumsal PDF veya düzenlenebilir Word belgesi oluşturun',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.white54),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE11D48).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFE11D48)),
-              ),
-              title: Text('PDF Raporu Olarak Paylaş', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-              subtitle: Text('Kurumsal antetli, profesyonel dizgi', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-              onTap: () {
-                Navigator.pop(ctx);
-                MeetingExportService.exportToPdf(
-                  context: context,
-                  ref: ref,
-                  title: title,
-                  content: note.content,
-                  category: note.category,
-                  date: note.createdAt,
-                );
-              },
-            ),
-            const Divider(color: Colors.white10),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.description_rounded, color: Color(0xFF2563EB)),
-              ),
-              title: Text('Word (.doc) Olarak Paylaş', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-              subtitle: Text('Düzenlenebilir Microsoft Word formatı', style: GoogleFonts.inter(color: Colors.white38, fontSize: 11)),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-              onTap: () {
-                Navigator.pop(ctx);
-                MeetingExportService.exportToWord(
-                  context: context,
-                  ref: ref,
-                  title: title,
-                  content: note.content,
-                  category: note.category,
-                  date: note.createdAt,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddOrEditNoteDialog({Note? existingNote}) {
-    HapticFeedback.lightImpact();
-    final controller = TextEditingController(text: existingNote?.content ?? '');
-    String selectedCat = existingNote?.category ?? 'Genel';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.deepNightBlue,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      existingNote == null ? 'Yeni Not Ekle' : 'Notu Düzenle',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Category chips
-                    Wrap(
-                      spacing: 8,
-                      children: ['Genel', 'İş', 'Kişisel', 'Fikirler', 'Finans'].map((cat) {
-                        final isSelected = selectedCat == cat;
-                        final color = _getCategoryColor(cat);
-                        return ChoiceChip(
-                          label: Text(cat),
-                          selected: isSelected,
-                          selectedColor: color.withValues(alpha: 0.25),
-                          backgroundColor: Colors.white.withValues(alpha: 0.06),
-                          labelStyle: TextStyle(
-                            color: isSelected ? color : AppColors.textSecondary,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            fontSize: 12,
-                          ),
-                          side: BorderSide(
-                            color: isSelected ? color : Colors.white10,
-                          ),
-                          onSelected: (val) {
-                            if (val) setModalState(() => selectedCat = cat);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Note text field
-                    TextField(
-                      controller: controller,
-                      maxLines: 5,
-                      autofocus: true,
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Aklındakileri buraya yaz...',
-                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
-                        filled: true,
-                        fillColor: AppColors.darkNavy,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.neonPurple,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onPressed: () {
-                          final text = controller.text.trim();
-                          if (text.isEmpty) return;
-
-                          if (existingNote == null) {
-                            ref.read(notesProvider.notifier).addNote(text, category: selectedCat);
-                          } else {
-                            ref.read(notesProvider.notifier).updateNote(
-                                  existingNote.copyWith(
-                                    content: text,
-                                    category: selectedCat,
-                                  ),
-                                );
-                          }
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          existingNote == null ? 'Notu Kaydet' : 'Değişiklikleri Kaydet',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (existingNote != null) ...[
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.iceBlue,
-                            side: BorderSide(color: AppColors.iceBlue.withValues(alpha: 0.4)),
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          icon: const Icon(Icons.ios_share_rounded, size: 18),
-                          label: Text(
-                            'Bu Notu PDF veya Word Olarak Paylaş',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _showNoteExportSheet(context, existingNote);
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    context.push(
+      RoutePaths.noteDetailPath(existingNote?.id ?? 'new'),
+      extra: existingNote,
     );
   }
 
@@ -534,7 +314,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                   child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                 ),
                 tooltip: 'Yeni Not Ekle',
-                onPressed: () => _showAddOrEditNoteDialog(),
+                onPressed: () => _openNoteEditor(),
               ),
             ),
           ],
@@ -568,7 +348,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                 child: FloatingActionButton.extended(
                   backgroundColor: AppColors.neonPurple,
                   elevation: 6,
-                  onPressed: () => _showAddOrEditNoteDialog(),
+                  onPressed: () => _openNoteEditor(),
                   icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
                   label: const Text('Yeni Not', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
@@ -699,7 +479,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
                         final catColor = _getCategoryColor(note.category);
-                        final dateStr = DateFormat('dd MMM, HH:mm', 'tr').format(note.createdAt);
+                        final catIcon = _getCategoryIcon(note.category);
+                        final dateStr = note.eventDate != null
+                            ? DateFormat('dd MMM, HH:mm', 'tr').format(note.eventDate!)
+                            : DateFormat('dd MMM, HH:mm', 'tr').format(note.createdAt);
 
                         return Dismissible(
                           key: Key(note.id),
@@ -707,10 +490,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                           background: Container(
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
-                            margin: const EdgeInsets.only(bottom: 12),
+                            margin: const EdgeInsets.only(bottom: 14),
                             decoration: BoxDecoration(
                               color: AppColors.coralRed.withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
                           ),
@@ -719,41 +502,90 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                             ref.read(notesProvider.notifier).deleteNote(note.id);
                           },
                           child: GestureDetector(
-                            onTap: () => _showAddOrEditNoteDialog(existingNote: note),
+                            onTap: () => _openNoteEditor(existingNote: note),
                             child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 color: AppColors.cardBackground,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: note.isPinned
-                                      ? AppColors.amber.withValues(alpha: 0.5)
-                                      : AppColors.cardBorder,
+                                      ? AppColors.amber.withValues(alpha: 0.6)
+                                      : Colors.white.withValues(alpha: 0.12),
                                   width: note.isPinned ? 1.5 : 1,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // Top Metadata Row
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Category Pill
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: catColor.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: catColor.withValues(alpha: 0.3), width: 0.8),
-                                        ),
-                                        child: Text(
-                                          note.category,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: catColor,
-                                          ),
+                                      // Category Pill & Event Date Pill
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: catColor.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: catColor.withValues(alpha: 0.35), width: 0.8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(catIcon, size: 13, color: catColor),
+                                                  const SizedBox(width: 5),
+                                                  Text(
+                                                    note.category,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: catColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (note.eventDate != null) ...[
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.iceBlue.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.3), width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.event_rounded, size: 12, color: AppColors.iceBlue),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      dateStr,
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 10.5,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: AppColors.iceBlue,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
 
@@ -761,13 +593,14 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(
-                                            dateStr,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white.withValues(alpha: 0.4),
+                                          if (note.eventDate == null)
+                                            Text(
+                                              dateStr,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.white.withValues(alpha: 0.4),
+                                              ),
                                             ),
-                                          ),
                                           const SizedBox(width: 8),
                                           GestureDetector(
                                             onTap: () {
@@ -775,16 +608,16 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                                               ref.read(notesProvider.notifier).togglePinNote(note.id);
                                             },
                                             child: Icon(
-                                              note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                                              note.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
                                               size: 18,
-                                              color: note.isPinned ? AppColors.amber : Colors.white38,
+                                              color: note.isPinned ? AppColors.amber : Colors.white30,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 10),
                                           GestureDetector(
                                             onTap: () {
                                               HapticFeedback.lightImpact();
-                                              Clipboard.setData(ClipboardData(text: note.content));
+                                              Clipboard.setData(ClipboardData(text: '${note.displayTitle}\n\n${note.displayBody}'));
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 const SnackBar(
                                                   content: Text('Not panoya kopyalandı!'),
@@ -795,48 +628,163 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                                             child: const Icon(
                                               Icons.copy_rounded,
                                               size: 16,
-                                              color: Colors.white38,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () => _showNoteExportSheet(context, note),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.iceBlue.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.35), width: 0.8),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.ios_share_rounded, size: 12, color: AppColors.iceBlue),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Paylaş',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppColors.iceBlue,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                              color: Colors.white30,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 10),
+
+                                  const SizedBox(height: 12),
+
+                                  // Title
                                   Text(
-                                    note.content,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
+                                    note.displayTitle,
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                       color: Colors.white,
-                                      height: 1.4,
+                                      letterSpacing: -0.2,
                                     ),
+                                  ),
+
+                                  if (note.displayBody.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      note.displayBody,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.white70,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                  ],
+
+                                  // Photos preview strip
+                                  if (note.imagePaths.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      height: 48,
+                                      child: Row(
+                                        children: [
+                                          ...note.imagePaths.take(3).map((path) {
+                                            return Container(
+                                              width: 48,
+                                              height: 48,
+                                              margin: const EdgeInsets.only(right: 8),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: Colors.white24),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(9),
+                                                child: Image.file(
+                                                  File(path),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Container(
+                                                    color: Colors.white10,
+                                                    child: const Icon(Icons.broken_image, size: 16, color: Colors.white30),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                          if (note.imagePaths.length > 3)
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: Colors.white24),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '+${note.imagePaths.length - 3}',
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 14),
+
+                                  // Footer: Media chips & Share Button
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      // Badges: Photos, Audio
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (note.imagePaths.isNotEmpty) ...[
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.photo_library_outlined, size: 13, color: Colors.white54),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${note.imagePaths.length}',
+                                                  style: const TextStyle(fontSize: 11, color: Colors.white54),
+                                                ),
+                                                const SizedBox(width: 10),
+                                              ],
+                                            ),
+                                          ],
+                                          if (note.audioPath != null) ...[
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: const [
+                                                Icon(Icons.mic_none_rounded, size: 14, color: AppColors.coralRed),
+                                                SizedBox(width: 4),
+                                                Text('Ses', style: TextStyle(fontSize: 11, color: Colors.white54)),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+
+                                      // Share Button (AirDrop, WhatsApp, Mail, PDF, Word)
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          MeetingExportService.showComprehensiveShareSheet(
+                                            context: context,
+                                            ref: ref,
+                                            note: note,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.iceBlue.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.35), width: 0.8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.ios_share_rounded, size: 13, color: AppColors.iceBlue),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                'Paylaş & Aktar',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.iceBlue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

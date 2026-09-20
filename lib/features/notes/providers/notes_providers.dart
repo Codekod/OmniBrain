@@ -31,16 +31,33 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
     }
   }
 
-  Future<void> addNote(String content, {String category = 'Genel'}) async {
+  Future<Note> addNote(
+    String content, {
+    String title = '',
+    DateTime? eventDate,
+    String category = 'Genel',
+    bool isPinned = false,
+    List<String> imagePaths = const [],
+    String? audioPath,
+    int? audioDurationSeconds,
+    List<String> tags = const [],
+  }) async {
     final note = Note(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
       content: content,
       createdAt: DateTime.now(),
+      eventDate: eventDate,
       category: category,
-      isPinned: false,
+      isPinned: isPinned,
+      imagePaths: imagePaths,
+      audioPath: audioPath,
+      audioDurationSeconds: audioDurationSeconds,
+      tags: tags,
     );
     await _repository.saveNote(note);
     await loadNotes();
+    return note;
   }
 
   Future<void> updateNote(Note updatedNote) async {
