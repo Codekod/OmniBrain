@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,14 +11,17 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/routing/app_router.dart';
-import 'package:omnibrain_ai/core/services/meeting_export_service.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
+import 'package:omnibrain_ai/core/widgets/premium_card.dart';
 import 'package:omnibrain_ai/domain/entities/note.dart';
 import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
 import 'package:omnibrain_ai/features/notes/widgets/voice_meeting_sheet.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 import 'package:omnibrain_ai/l10n/app_localizations.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
@@ -38,6 +42,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
 
   // Notes list search & filter
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchFocused = false;
   String _selectedCategory = 'Tümü';
   String _searchQuery = '';
 
@@ -99,6 +105,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _speech = stt.SpeechToText();
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _isSearchFocused = _searchFocusNode.hasFocus;
+      });
+    });
   }
 
   @override
@@ -107,6 +118,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
     _chatInputController.dispose();
     _chatScrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _speech.stop();
     super.dispose();
   }
@@ -257,6 +269,76 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
     );
   }
 
+  void _showContextMenu(BuildContext context, Note note) {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surfacePrimary.withValues(alpha: 0.8),
+                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  ListTile(
+                    leading: Icon(note.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded, color: AppColors.textPrimary),
+                    title: Text(note.isPinned ? 'Sabitlemeyi Kaldır' : 'Sabitle', style: AppTextStyles.bodyText),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(notesProvider.notifier).togglePinNote(note.id);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.share_rounded, color: AppColors.textPrimary),
+                    title: Text('Paylaş', style: AppTextStyles.bodyText),
+                    onTap: () {
+                      Navigator.pop(context);
+                      SharePlus.instance.share(ShareParams(text: '${note.displayTitle}\n\n${note.displayBody}'));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.copy_rounded, color: AppColors.textPrimary),
+                    title: Text('Çoğalt', style: AppTextStyles.bodyText),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(notesProvider.notifier).addNote('${note.displayBody} (Kopya)', category: note.category);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline_rounded, color: AppColors.coralRed),
+                    title: Text('Sil', style: AppTextStyles.bodyText.copyWith(color: AppColors.coralRed)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ref.read(notesProvider.notifier).deleteNote(note.id);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -375,31 +457,55 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
             // Search Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Notlarda ara...',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14),
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, color: AppColors.textSecondary, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
+                  border: Border.all(
+                    color: _isSearchFocused
+                        ? AppColors.neonPurple.withValues(alpha: 0.5)
+                        : AppColors.borderSubtle,
+                    width: 1,
+                  ),
+                  boxShadow: _isSearchFocused
+                      ? [
+                          BoxShadow(
+                            color: AppColors.neonPurple.withValues(alpha: 0.2),
+                            blurRadius: 12,
+                            spreadRadius: 2,
                           )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ]
+                      : [],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                        style: AppTextStyles.bodyText,
+                        decoration: InputDecoration(
+                          hintText: 'Notlarda ara...',
+                          hintStyle: AppTextStyles.bodyText.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.7)),
+                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, color: AppColors.textSecondary, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -459,21 +565,44 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.note_alt_outlined,
-                            size: 56,
-                            color: Colors.white24,
+                            _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.note_add_rounded,
+                            size: 48,
+                            color: AppColors.textSecondary,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           Text(
                             _searchQuery.isNotEmpty
                                 ? "Aradığınız kriterde not bulunamadı"
-                                : "Bu kategoride henüz not yok",
-                            style: const TextStyle(color: Colors.white54, fontSize: 14),
+                                : "Henüz not yok",
+                            style: AppTextStyles.sectionTitle,
                           ),
+                          const SizedBox(height: 8),
+                          if (_searchQuery.isEmpty)
+                            Text(
+                              "İlk notunuzu oluşturmak için + butonuna dokunun",
+                              style: AppTextStyles.captionSecondary,
+                              textAlign: TextAlign.center,
+                            ),
+                          const SizedBox(height: 24),
+                          if (_searchQuery.isEmpty)
+                            GestureDetector(
+                              onTap: () => _openNoteEditor(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [AppColors.neonPurple, AppColors.iceBlue]),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text("Not Oluştur", style: AppTextStyles.bodyText.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
                         ],
                       ),
                     )
-                  : ListView.builder(
+                  : MasonryGridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
@@ -503,287 +632,78 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
                           },
                           child: GestureDetector(
                             onTap: () => _openNoteEditor(existingNote: note),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: note.isPinned
-                                      ? AppColors.amber.withValues(alpha: 0.6)
-                                      : Colors.white.withValues(alpha: 0.12),
-                                  width: note.isPinned ? 1.5 : 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
+                            onLongPress: () => _showContextMenu(context, note),
+                            child: PremiumCard(
+                              variant: note.isPinned ? PremiumCardVariant.neonBorder : PremiumCardVariant.standard,
+                              accentColor: note.isPinned ? AppColors.amber : null,
+                              padding: const EdgeInsets.all(16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Top Metadata Row
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      // Category Pill & Event Date Pill
-                                      Expanded(
-                                        child: Wrap(
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: catColor.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(10),
-                                                border: Border.all(color: catColor.withValues(alpha: 0.35), width: 0.8),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(catIcon, size: 13, color: catColor),
-                                                  const SizedBox(width: 5),
-                                                  Text(
-                                                    note.category,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: catColor,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            if (note.eventDate != null) ...[
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.iceBlue.withValues(alpha: 0.12),
-                                                  borderRadius: BorderRadius.circular(10),
-                                                  border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.3), width: 0.8),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(Icons.event_rounded, size: 12, color: AppColors.iceBlue),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      dateStr,
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 10.5,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: AppColors.iceBlue,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                                  // Category color strip & icon
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          height: 3,
+                                          width: 32,
+                                          decoration: BoxDecoration(
+                                            color: catColor,
+                                            borderRadius: BorderRadius.circular(1.5),
+                                          ),
                                         ),
-                                      ),
-
-                                      // Actions: Pin & Copy
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (note.eventDate == null)
-                                            Text(
-                                              dateStr,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.white.withValues(alpha: 0.4),
-                                              ),
-                                            ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              ref.read(notesProvider.notifier).togglePinNote(note.id);
-                                            },
-                                            child: Icon(
-                                              note.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                                              size: 18,
-                                              color: note.isPinned ? AppColors.amber : Colors.white30,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          GestureDetector(
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              Clipboard.setData(ClipboardData(text: '${note.displayTitle}\n\n${note.displayBody}'));
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Not panoya kopyalandı!'),
-                                                  duration: Duration(seconds: 1),
-                                                ),
-                                              );
-                                            },
-                                            child: const Icon(
-                                              Icons.copy_rounded,
-                                              size: 16,
-                                              color: Colors.white30,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                        Icon(catIcon, size: 14, color: catColor.withValues(alpha: 0.8)),
+                                      ],
+                                    ),
                                   ),
-
-                                  const SizedBox(height: 12),
-
                                   // Title
                                   Text(
                                     note.displayTitle,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -0.2,
-                                    ),
+                                    style: AppTextStyles.cardTitle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-
                                   if (note.displayBody.isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Text(
                                       note.displayBody,
-                                      maxLines: 2,
+                                      maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        color: Colors.white70,
-                                        height: 1.45,
-                                      ),
+                                      style: AppTextStyles.captionSecondary,
                                     ),
                                   ],
-
-                                  // Photos preview strip
+                                  // Photo preview
                                   if (note.imagePaths.isNotEmpty) ...[
                                     const SizedBox(height: 12),
-                                    SizedBox(
-                                      height: 48,
-                                      child: Row(
-                                        children: [
-                                          ...note.imagePaths.take(3).map((path) {
-                                            return Container(
-                                              width: 48,
-                                              height: 48,
-                                              margin: const EdgeInsets.only(right: 8),
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(10),
-                                                border: Border.all(color: Colors.white24),
-                                              ),
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(9),
-                                                child: Image.file(
-                                                  File(path),
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => Container(
-                                                    color: Colors.white10,
-                                                    child: const Icon(Icons.broken_image, size: 16, color: Colors.white30),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          }),
-                                          if (note.imagePaths.length > 3)
-                                            Container(
-                                              width: 48,
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(10),
-                                                border: Border.all(color: Colors.white24),
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  '+${note.imagePaths.length - 3}',
-                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        File(note.imagePaths.first),
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          width: 48,
+                                          height: 48,
+                                          color: Colors.white10,
+                                          child: const Icon(Icons.broken_image, size: 16, color: Colors.white30),
+                                        ),
                                       ),
                                     ),
                                   ],
-
-                                  const SizedBox(height: 14),
-
-                                  // Footer: Media chips & Share Button
+                                  const SizedBox(height: 12),
+                                  // Footer
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      // Badges: Photos, Audio
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (note.imagePaths.isNotEmpty) ...[
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.photo_library_outlined, size: 13, color: Colors.white54),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${note.imagePaths.length}',
-                                                  style: const TextStyle(fontSize: 11, color: Colors.white54),
-                                                ),
-                                                const SizedBox(width: 10),
-                                              ],
-                                            ),
-                                          ],
-                                          if (note.audioPath != null) ...[
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: const [
-                                                Icon(Icons.mic_none_rounded, size: 14, color: AppColors.coralRed),
-                                                SizedBox(width: 4),
-                                                Text('Ses', style: TextStyle(fontSize: 11, color: Colors.white54)),
-                                              ],
-                                            ),
-                                          ],
-                                        ],
+                                      Text(
+                                        dateStr,
+                                        style: AppTextStyles.microText.copyWith(color: AppColors.textSecondary),
                                       ),
-
-                                      // Share Button (AirDrop, WhatsApp, Mail, PDF, Word)
-                                      GestureDetector(
-                                        onTap: () {
-                                          HapticFeedback.lightImpact();
-                                          MeetingExportService.showComprehensiveShareSheet(
-                                            context: context,
-                                            ref: ref,
-                                            note: note,
-                                          );
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.iceBlue.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.35), width: 0.8),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.ios_share_rounded, size: 13, color: AppColors.iceBlue),
-                                              const SizedBox(width: 5),
-                                              Text(
-                                                'Paylaş & Aktar',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: AppColors.iceBlue,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
+                                      if (note.isPinned)
+                                        const Icon(Icons.push_pin_rounded, size: 14, color: AppColors.amber),
                                     ],
                                   ),
                                 ],

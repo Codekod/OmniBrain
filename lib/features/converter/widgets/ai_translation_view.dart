@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -486,13 +487,22 @@ OmniBrain AI Çevirmen ile oluşturuldu 🚀
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.neonPurple.withValues(alpha: 0.25)
-                      : Colors.white.withValues(alpha: 0.04),
+                      ? AppColors.neonPurple.withValues(alpha: 0.20)
+                      : AppColors.surfaceSecondary,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isSelected ? AppColors.neonPurple : Colors.white10,
                     width: isSelected ? 1.5 : 1,
                   ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.neonPurple.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          )
+                        ]
+                      : null,
                 ),
                 child: Text(
                   tone.label,
@@ -511,12 +521,16 @@ OmniBrain AI Çevirmen ile oluşturuldu 🚀
   }
 
   Widget _buildInputCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -635,6 +649,8 @@ OmniBrain AI Çevirmen ile oluşturuldu 🚀
           ),
         ],
       ),
+        ),
+      ),
     );
   }
 
@@ -665,26 +681,30 @@ OmniBrain AI Çevirmen ile oluşturuldu 🚀
   }
 
   Widget _buildResultCard(AiTranslationResult result) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1E1B4B),
-            const Color(0xFF0F172A),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.neonPurple.withValues(alpha: 0.12),
-            blurRadius: 20,
-            spreadRadius: 2,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1E1B4B),
+                const Color(0xFF0F172A),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.neonPurple.withValues(alpha: 0.12),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-        ],
-      ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -738,38 +758,74 @@ OmniBrain AI Çevirmen ile oluşturuldu 🚀
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 10),
 
-          // Actions: Copy, Share, Swap
+          // Actions: Kopyala, Seslendir, Paylaş
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Reverse into input
-              IconButton(
-                icon: const Icon(Icons.input_rounded, color: Colors.white60, size: 18),
-                tooltip: 'Metin Kutusuna Aktar',
-                onPressed: () {
+              _buildActionPill(
+                icon: Icons.copy_rounded,
+                label: 'Kopyala',
+                onTap: () => _copyToClipboard(result.translatedText),
+              ),
+              const SizedBox(width: 8),
+              _buildActionPill(
+                icon: Icons.volume_up_rounded,
+                label: 'Seslendir',
+                onTap: () {
                   HapticFeedback.lightImpact();
-                  setState(() {
-                    _textController.text = result.translatedText;
-                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Seslendirme özelliği yakında eklenecek.')),
+                  );
                 },
               ),
-              // Copy Button
-              IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Colors.white60, size: 18),
-                tooltip: 'Kopyala',
-                onPressed: () => _copyToClipboard(result.translatedText),
-              ),
-              // Share Button (AirDrop, WhatsApp, Mail)
-              IconButton(
-                icon: const Icon(Icons.ios_share_rounded, color: AppColors.iceBlue, size: 18),
-                tooltip: 'Paylaş',
-                onPressed: () => _shareTranslation(result),
+              const SizedBox(width: 8),
+              _buildActionPill(
+                icon: Icons.ios_share_rounded,
+                label: 'Paylaş',
+                color: AppColors.iceBlue,
+                onTap: () => _shareTranslation(result),
               ),
             ],
           ),
         ],
       ),
+        ),
+      ),
     ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.05, end: 0);
+  }
+
+  Widget _buildActionPill({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.white,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildTipCard() {

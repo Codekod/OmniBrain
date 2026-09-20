@@ -30,33 +30,71 @@ class SmartToolGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final tools = _getTools(context);
 
-    return GridView.count(
-      crossAxisCount: 3,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.0,
-      children: tools.map((tool) {
-        return ToolWidgetCard(
-          iconData: tool.icon,
-          name: tool.name,
-          color: tool.color,
-          onTap: () {
-            if (tool.route.isNotEmpty) {
-              context.push(tool.route);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${tool.name} çok yakında eklenecek!'),
-                  backgroundColor: AppColors.neonPurple,
-                  behavior: SnackBarBehavior.floating,
+    return Column(
+      children: [
+        // Top row: 2 large hero cards
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 160,
+                child: ToolWidgetCard(
+                  iconData: tools[0].icon,
+                  name: tools[0].name,
+                  color: tools[0].color,
+                  subtitle: 'Akıllı İşlemler',
+                  isHero: true,
+                  onTap: () => context.push(tools[0].route),
                 ),
-              );
-            }
-          },
-        );
-      }).toList(),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 160,
+                child: ToolWidgetCard(
+                  iconData: tools[1].icon,
+                  name: tools[1].name,
+                  color: tools[1].color,
+                  subtitle: 'AI Destekli',
+                  isHero: true,
+                  onTap: () => context.push(tools[1].route),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Bottom row: 4 compact cards in 2x2 grid
+        GridView.count(
+          crossAxisCount: 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 2.0, // Or whatever fits
+          children: tools.sublist(2).map((tool) {
+            return ToolWidgetCard(
+              iconData: tool.icon,
+              name: tool.name,
+              color: tool.color,
+              onTap: () {
+                if (tool.route.isNotEmpty) {
+                  context.push(tool.route);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${tool.name} çok yakında eklenecek!'),
+                      backgroundColor: AppColors.neonPurple,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

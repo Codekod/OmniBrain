@@ -190,8 +190,8 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen>
         _speech.listen(
           listenOptions: stt.SpeechListenOptions(
             listenMode: stt.ListenMode.confirmation,
+            localeId: 'tr_TR',
           ),
-          localeId: 'tr_TR',
           onResult: (result) {
             setModalState(() {
               _titleController.text = result.recognizedWords;

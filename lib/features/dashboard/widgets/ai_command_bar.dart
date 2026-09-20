@@ -83,8 +83,8 @@ class _AiCommandBarState extends ConsumerState<AiCommandBar> {
         _speech.listen(
           listenOptions: stt.SpeechListenOptions(
             listenMode: stt.ListenMode.confirmation,
+            localeId: 'tr_TR',
           ),
-          localeId: 'tr_TR',
           onResult: (result) {
             setState(() {
               _controller.text = result.recognizedWords;

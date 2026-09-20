@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/widgets/premium_card.dart';
 import 'package:omnibrain_ai/features/pomodoro/providers/pomodoro_providers.dart';
 import 'package:omnibrain_ai/features/reminders/reminders_screen.dart';
 
@@ -69,10 +69,22 @@ class FocusZone extends ConsumerWidget {
           _FocusCard(
             icon: Icons.timer_rounded,
             iconColor: pomodoroState.isRunning ? AppColors.softGreen : AppColors.neonPurple,
-            borderColor: pomodoroState.isRunning ? AppColors.softGreen : AppColors.neonPurple,
+            accentColor: pomodoroState.isRunning ? AppColors.softGreen : AppColors.neonPurple,
             title: timerTitle,
             subtitle: timerSubtitle,
             label: timerLabel,
+            variant: pomodoroState.isRunning ? PremiumCardVariant.neonBorder : PremiumCardVariant.standard,
+            trailing: pomodoroState.isRunning
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: AppColors.softGreen,
+                      strokeWidth: 2,
+                      value: pomodoroState.remainingSeconds / pomodoroState.totalSeconds,
+                    ),
+                  )
+                : null,
             onTap: () {
               HapticFeedback.lightImpact();
               context.push('/pomodoro');
@@ -96,10 +108,18 @@ class FocusZone extends ConsumerWidget {
                 return _FocusCard(
                   icon: Icons.notifications_active_rounded,
                   iconColor: AppColors.amber,
-                  borderColor: AppColors.amber,
+                  accentColor: AppColors.amber,
                   title: 'Yaklaşan Hatırlatıcı',
                   subtitle: nextReminder.title,
                   label: dateStr,
+                  surfaceGradient: LinearGradient(
+                    colors: [
+                      AppColors.amber.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   onTap: () {
                     HapticFeedback.lightImpact();
                     context.push('/reminders');
@@ -109,10 +129,18 @@ class FocusZone extends ConsumerWidget {
               return _FocusCard(
                 icon: Icons.notifications_none_rounded,
                 iconColor: AppColors.amber,
-                borderColor: AppColors.amber,
+                accentColor: AppColors.amber,
                 title: 'Hatırlatıcılar',
                 subtitle: 'Planlanmış görev yok',
                 label: '+ Ekle',
+                surfaceGradient: LinearGradient(
+                  colors: [
+                    AppColors.amber.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 onTap: () {
                   HapticFeedback.lightImpact();
                   context.push('/reminders');
@@ -122,7 +150,7 @@ class FocusZone extends ConsumerWidget {
             loading: () => const _FocusCard(
               icon: Icons.notifications_active_rounded,
               iconColor: AppColors.amber,
-              borderColor: AppColors.amber,
+              accentColor: AppColors.amber,
               title: 'Hatırlatıcılar',
               subtitle: 'Yükleniyor...',
               label: '',
@@ -130,10 +158,18 @@ class FocusZone extends ConsumerWidget {
             error: (_, _) => _FocusCard(
               icon: Icons.notifications_none_rounded,
               iconColor: AppColors.amber,
-              borderColor: AppColors.amber,
+              accentColor: AppColors.amber,
               title: 'Hatırlatıcılar',
               subtitle: 'Görev eklemek için dokunun',
               label: '+ Ekle',
+              surfaceGradient: LinearGradient(
+                colors: [
+                  AppColors.amber.withValues(alpha: 0.08),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               onTap: () {
                 HapticFeedback.lightImpact();
                 context.push('/reminders');
@@ -146,10 +182,19 @@ class FocusZone extends ConsumerWidget {
           _FocusCard(
             icon: Icons.auto_awesome_rounded,
             iconColor: AppColors.iceBlue,
-            borderColor: AppColors.iceBlue,
+            accentColor: AppColors.iceBlue,
             title: 'AI Günlük Asistan',
             subtitle: 'Bugün odaklanmak için bir hedef belirleyelim mi?',
             label: 'Sor',
+            surfaceGradient: LinearGradient(
+              colors: [
+                AppColors.iceBlue.withValues(alpha: 0.15),
+                Colors.transparent,
+                AppColors.iceBlue.withValues(alpha: 0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             onTap: () {
               HapticFeedback.lightImpact();
               context.go('/ai-command');
@@ -164,120 +209,122 @@ class FocusZone extends ConsumerWidget {
 class _FocusCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final Color borderColor;
+  final Color accentColor;
   final String title;
   final String subtitle;
   final String label;
   final VoidCallback? onTap;
+  final PremiumCardVariant variant;
+  final Widget? trailing;
+  final Gradient? surfaceGradient;
 
   const _FocusCard({
     required this.icon,
     required this.iconColor,
-    required this.borderColor,
+    required this.accentColor,
     required this.title,
     required this.subtitle,
     required this.label,
     this.onTap,
+    this.variant = PremiumCardVariant.standard,
+    this.trailing,
+    this.surfaceGradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PremiumCard(
+      variant: variant,
+      accentColor: accentColor,
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
+      padding: EdgeInsets.zero, // We will handle padding inside for gradient
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: surfaceGradient,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Left neon accent bar
+            Container(
+              width: 4,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    accentColor,
+                    accentColor.withValues(alpha: 0.2),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Left neon accent bar
-                Container(
-                  width: 4,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        borderColor,
-                        borderColor.withValues(alpha: 0.2),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(width: 16),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(icon, color: iconColor, size: 16),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      Icon(icon, color: iconColor, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                ),
-                if (label.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: borderColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
-                    child: Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: borderColor,
-                      ),
-                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
+            if (trailing != null) ...[
+              const SizedBox(width: 12),
+              trailing!,
+            ],
+            if (label.isNotEmpty && trailing == null) ...[
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

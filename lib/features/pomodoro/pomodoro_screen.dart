@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:omnibrain_ai/core/routing/app_router.dart';
 import 'package:omnibrain_ai/core/services/ambient_sound_service.dart';
 import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
+import 'package:omnibrain_ai/core/widgets/premium_card.dart';
 import 'package:omnibrain_ai/features/pomodoro/providers/pomodoro_providers.dart';
 import 'package:omnibrain_ai/features/pomodoro/widgets/ambient_visual_layer.dart';
 import 'package:omnibrain_ai/features/pomodoro/widgets/focus_tree_view.dart';
@@ -171,8 +173,13 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
               const AmbientVisualLayer(),
 
               // Main Pomodoro Content
-              Column(
-                children: [
+              CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      children: [
                   // AI Task duration coach
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
@@ -300,12 +307,11 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                       SizedBox(
                         width: 270,
                         height: 270,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 8,
-                          backgroundColor: AppColors.darkNavy,
-                          color: primaryColor,
-                          strokeCap: StrokeCap.round,
+                        child: CustomPaint(
+                          painter: _TimerRingPainter(
+                            progress: progress,
+                            primaryColor: primaryColor,
+                          ),
                         ),
                       ),
                       Column(
@@ -322,11 +328,8 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                           const SizedBox(height: 4),
                           Text(
                             '$minutes:$seconds',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 46,
-                              fontWeight: FontWeight.w200,
+                            style: AppTextStyles.timerDisplay.copyWith(
                               color: Colors.white,
-                              letterSpacing: -1,
                             ),
                           ),
                           if (!pomodoroState.isRunning &&
@@ -394,7 +397,9 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                           height: 78,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: primaryColor,
+                            gradient: pomodoroState.isBreak 
+                                ? const LinearGradient(colors: [AppColors.softGreen, AppColors.amber])
+                                : const LinearGradient(colors: [AppColors.neonPurple, AppColors.iceBlue]),
                             boxShadow: [
                               BoxShadow(
                                 color: primaryColor.withValues(alpha: 0.4),
@@ -409,6 +414,19 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                             color: Colors.white,
                           ),
                         ),
+                      ).animate(
+                        onPlay: (controller) => controller.repeat(),
+                        target: pomodoroState.isRunning ? 1 : 0,
+                      ).scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.03, 1.03),
+                        duration: 1.seconds,
+                        curve: Curves.easeInOut,
+                      ).then().scale(
+                        begin: const Offset(1.03, 1.03),
+                        end: const Offset(1, 1),
+                        duration: 1.seconds,
+                        curve: Curves.easeInOut,
                       ),
                       const SizedBox(width: 28),
                       _buildControlButton(
@@ -461,8 +479,11 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                   ).animate().fadeIn(duration: 400.ms),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ],
+    ),
         ),
       ),
     );
@@ -591,30 +612,33 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
               final isPassed = roundNum < state.currentRound;
               final isCurrent = roundNum == state.currentRound;
 
-              Color dotColor;
-              if (isPassed) {
-                dotColor = AppColors.softGreen;
-              } else if (isCurrent) {
-                dotColor = state.isBreak ? AppColors.softGreen : AppColors.neonPurple;
-              } else {
-                dotColor = Colors.white24;
+              if (isCurrent) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    value: state.totalSeconds > 0 
+                        ? (state.totalSeconds - state.remainingSeconds) / state.totalSeconds
+                        : 0.0,
+                    strokeWidth: 2.5,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    color: state.isBreak ? AppColors.softGreen : AppColors.neonPurple,
+                  ),
+                );
               }
 
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: isCurrent ? 14 : 7,
-                height: 7,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: dotColor,
-                  boxShadow: isCurrent
-                      ? [
-                          BoxShadow(
-                            color: dotColor.withValues(alpha: 0.6),
-                            blurRadius: 6,
-                          )
-                        ]
-                      : null,
+                  shape: BoxShape.circle,
+                  color: isPassed ? AppColors.softGreen : Colors.transparent,
+                  border: Border.all(
+                    color: isPassed ? AppColors.softGreen : Colors.white24,
+                    width: 1.5,
+                  ),
                 ),
               );
             }),
@@ -793,16 +817,13 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return PremiumCard(
+      variant: PremiumCardVariant.standard,
+      borderRadius: 999,
+      width: 52,
+      height: 52,
       onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.08),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        ),
+      child: Center(
         child: Icon(icon, color: color, size: 24),
       ),
     );
@@ -878,55 +899,51 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                         ref.read(ambientSoundProvider.notifier).toggleTrack(track);
                       }
                     },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isTrackPlaying
-                            ? AppColors.neonPurple.withValues(alpha: 0.25)
-                            : Colors.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isTrackPlaying
-                              ? AppColors.iceBlue
-                              : (track.isPro && !isPro
-                                  ? AppColors.amber.withValues(alpha: 0.3)
-                                  : Colors.white.withValues(alpha: 0.1)),
-                          width: isTrackPlaying ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(track.icon, style: const TextStyle(fontSize: 16)),
-                          const SizedBox(width: 6),
-                          Text(
-                            track.name,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: isTrackPlaying ? FontWeight.bold : FontWeight.w500,
-                              color: isTrackPlaying ? Colors.white : Colors.white70,
+                    child: Builder(
+                      builder: (context) {
+                        final chip = PremiumCard(
+                          variant: isTrackPlaying ? PremiumCardVariant.neonBorder : PremiumCardVariant.standard,
+                          borderRadius: 16,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(track.icon, style: const TextStyle(fontSize: 16)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  track.name,
+                                  style: AppTextStyles.bodyText.copyWith(
+                                    fontSize: 12,
+                                    fontWeight: isTrackPlaying ? FontWeight.bold : FontWeight.w500,
+                                    color: isTrackPlaying ? Colors.white : Colors.white70,
+                                  ),
+                                ),
+                                if (track.isPro && !isPro) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.amber.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'PRO',
+                                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.amber),
+                                    ),
+                                  ),
+                                ] else if (isTrackPlaying) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.graphic_eq_rounded, color: AppColors.iceBlue, size: 14),
+                                ],
+                              ],
                             ),
                           ),
-                          if (track.isPro && !isPro) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.amber.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'PRO',
-                                style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.amber),
-                              ),
-                            ),
-                          ] else if (isTrackPlaying) ...[
-                            const SizedBox(width: 6),
-                            const Icon(Icons.graphic_eq_rounded, color: AppColors.iceBlue, size: 14),
-                          ],
-                        ],
-                      ),
+                        );
+                        return isTrackPlaying 
+                            ? chip.animate(onPlay: (c) => c.repeat(reverse: true)).fade(begin: 0.6, end: 1.0, duration: 1500.ms)
+                            : chip;
+                      }
                     ),
                   ),
                 );
@@ -939,23 +956,38 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
               children: [
                 const Icon(Icons.volume_down_rounded, color: Colors.white38, size: 16),
                 Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: AppColors.iceBlue,
-                      inactiveTrackColor: Colors.white12,
-                      thumbColor: AppColors.iceBlue,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                      trackHeight: 3,
-                    ),
-                    child: Slider(
-                      value: ambientState.volume,
-                      min: 0.0,
-                      max: 1.0,
-                      onChanged: (val) {
-                        ref.read(ambientSoundProvider.notifier).setVolume(val);
-                      },
-                    ),
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Container(
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(2),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.neonPurple, AppColors.iceBlue],
+                          ),
+                        ),
+                      ),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: Colors.transparent,
+                          inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+                          thumbColor: AppColors.iceBlue,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                          trackHeight: 4,
+                        ),
+                        child: Slider(
+                          value: ambientState.volume,
+                          min: 0.0,
+                          max: 1.0,
+                          onChanged: (val) {
+                            ref.read(ambientSoundProvider.notifier).setVolume(val);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const Icon(Icons.volume_up_rounded, color: Colors.white70, size: 16),
@@ -970,5 +1002,76 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
         ],
       ),
     );
+  }
+}
+
+class _TimerRingPainter extends CustomPainter {
+  final double progress;
+  final Color primaryColor;
+
+  _TimerRingPainter({required this.progress, required this.primaryColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    final bgPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    if (progress <= 0) return;
+
+    final sweepAngle = 2 * math.pi * progress;
+    final startAngle = -math.pi / 2;
+
+    final isBreak = primaryColor == AppColors.softGreen;
+    final colors = isBreak 
+        ? [AppColors.softGreen, AppColors.amber] 
+        : [AppColors.neonPurple, AppColors.iceBlue];
+
+    final gradient = SweepGradient(
+      startAngle: 0.0,
+      endAngle: 2 * math.pi,
+      colors: colors,
+      transform: const GradientRotation(-math.pi / 2),
+    );
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final glowPaint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    canvas.drawArc(rect, startAngle, sweepAngle, false, glowPaint);
+
+    final progressPaint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, startAngle, sweepAngle, false, progressPaint);
+
+    final dotX = center.dx + radius * math.cos(startAngle + sweepAngle);
+    final dotY = center.dy + radius * math.sin(startAngle + sweepAngle);
+    
+    final dotPaint = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(dotX, dotY), 4, dotPaint);
+    
+    final dotGlowPaint = Paint()
+      ..color = colors.last.withValues(alpha: 0.8)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(Offset(dotX, dotY), 8, dotGlowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TimerRingPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.primaryColor != primaryColor;
   }
 }

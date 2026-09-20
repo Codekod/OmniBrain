@@ -1,7 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,6 +9,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
+import 'package:omnibrain_ai/core/theme/text_styles.dart';
+import 'package:omnibrain_ai/core/widgets/premium_card.dart';
 
 class SmartCalculatorScreen extends ConsumerStatefulWidget {
   const SmartCalculatorScreen({super.key});
@@ -28,11 +30,11 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
   final List<Map<String, String>> _calculations = [];
 
   final List<String> _quickMathShortcuts = [
-    "%20 KDV Ekle",
-    "%20 KDV Çıkar",
-    "Yüzde Hesapla",
-    "Hesabı 4 Kişiye Böl",
-    "Kredi Aylık Taksiti",
+    "🧾 KDV Ekle",
+    "🧾 KDV Çıkar",
+    "📊 Yüzde Hesapla",
+    "👥 Hesabı Böl",
+    "💳 Kredi Taksiti",
   ];
 
   @override
@@ -120,8 +122,7 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          listenOptions: stt.SpeechListenOptions(listenMode: stt.ListenMode.confirmation),
-          localeId: 'tr_TR',
+          listenOptions: stt.SpeechListenOptions(listenMode: stt.ListenMode.confirmation, localeId: 'tr_TR'),
           onResult: (val) {
             setState(() {
               _inputController.text = val.recognizedWords;
@@ -146,9 +147,7 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
           ),
           title: Text(
             'Akıllı Hesaplayıcı',
-            style: GoogleFonts.montserrat(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.pageTitle.copyWith(
               color: Colors.white,
             ),
           ),
@@ -177,23 +176,37 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final label = _quickMathShortcuts[index];
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        _inputController.text = "$label: ";
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.neonPurple.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          label,
-                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary),
-                        ),
-                      ),
+                    bool isPressed = false;
+                    return StatefulBuilder(
+                      builder: (context, setChipState) {
+                        return GestureDetector(
+                          onTapDown: (_) => setChipState(() => isPressed = true),
+                          onTapUp: (_) {
+                            setChipState(() => isPressed = false);
+                            HapticFeedback.selectionClick();
+                            // Skip the emoji part for input
+                            final inputLabel = label.split(' ').skip(1).join(' ');
+                            _inputController.text = "$inputLabel: ";
+                          },
+                          onTapCancel: () => setChipState(() => isPressed = false),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.neonPurple.withValues(alpha: isPressed ? 0.3 : 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.neonPurple.withValues(alpha: isPressed ? 0.8 : 0.3)),
+                              boxShadow: isPressed 
+                                ? [BoxShadow(color: AppColors.neonPurple.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 1)]
+                                : [],
+                            ),
+                            child: Text(
+                              label,
+                              style: AppTextStyles.caption.copyWith(color: Colors.white),
+                            ),
+                          ),
+                        );
+                      }
                     );
                   },
                 ),
@@ -210,37 +223,65 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(22),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.neonPurple.withValues(alpha: 0.2),
-                                  border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.4)),
-                                ),
-                                child: const Icon(
-                                  Icons.calculate_rounded,
-                                  size: 50,
-                                  color: AppColors.neonPurple,
+                              Text(
+                                "Deneyin",
+                                style: AppTextStyles.caption.copyWith(color: Colors.white60),
+                              ),
+                              const SizedBox(height: 16),
+                              PremiumCard(
+                                variant: PremiumCardVariant.standard,
+                                onTap: () => _processCalculation("450 * 1.20"),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    const Text("🧮", style: TextStyle(fontSize: 24)),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("450 × 1.20 = ?", style: AppTextStyles.cardTitle),
+                                        Text("KDV Hesapla", style: AppTextStyles.caption.copyWith(color: Colors.white54)),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 20),
-                              Text(
-                                "Matematik & Akıllı Hesaplama",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              const SizedBox(height: 12),
+                              PremiumCard(
+                                variant: PremiumCardVariant.standard,
+                                onTap: () => _processCalculation("%10 bahşiş hesapla"),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    const Text("💰", style: TextStyle(fontSize: 24)),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("%10 bahşiş hesapla", style: AppTextStyles.cardTitle),
+                                        Text("Bahşiş & Paylaştır", style: AppTextStyles.caption.copyWith(color: Colors.white54)),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                "İster formül yaz (450 * 1.20), ister doğal dille sor;\n'1500 liralık yemeğin %10 bahşişi ve 3 kişiye payı ne kadar?'",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                  height: 1.4,
+                              const SizedBox(height: 12),
+                              PremiumCard(
+                                variant: PremiumCardVariant.standard,
+                                onTap: () => _processCalculation("1500 / 3 kişi"),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    const Text("👥", style: TextStyle(fontSize: 24)),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("1500 ÷ 3 kişi", style: AppTextStyles.cardTitle),
+                                        Text("Hesabı Böl", style: AppTextStyles.caption.copyWith(color: Colors.white54)),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -261,81 +302,104 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
                               alignment: Alignment.centerRight,
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 12, left: 60),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.neonPurple.withValues(alpha: 0.25),
-                                  border: Border.all(color: AppColors.neonPurple.withValues(alpha: 0.5)),
+                                child: ClipRRect(
                                   borderRadius: const BorderRadius.only(
                                     topLeft: Radius.circular(18),
                                     topRight: Radius.circular(18),
                                     bottomLeft: Radius.circular(18),
                                     bottomRight: Radius.circular(4),
                                   ),
-                                ),
-                                child: Text(
-                                  item['content']!,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.neonPurple.withValues(alpha: 0.15),
+                                        border: Border(
+                                          top: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        item['content']!,
+                                        style: AppTextStyles.bodyText.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             );
                           }
 
-                          return Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 14, right: 40),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: isError
-                                    ? AppColors.coralRed.withValues(alpha: 0.15)
-                                    : AppColors.darkNavy,
-                                border: Border.all(
-                                  color: isError
-                                      ? AppColors.coralRed.withValues(alpha: 0.4)
-                                      : AppColors.iceBlue.withValues(alpha: 0.3),
-                                ),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(18),
-                                  topRight: Radius.circular(18),
-                                  bottomLeft: Radius.circular(4),
-                                  bottomRight: Radius.circular(18),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        isError ? Icons.error_outline : Icons.auto_awesome,
-                                        color: isError ? AppColors.coralRed : AppColors.iceBlue,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        isError ? "Hata" : "Sonuç",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: isError ? AppColors.coralRed : AppColors.iceBlue,
+                          return GestureDetector(
+                            onLongPress: () {
+                              if (!isError) {
+                                Clipboard.setData(ClipboardData(text: item['content'] ?? ''));
+                                HapticFeedback.mediumImpact();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Sonuç kopyalandı!'), duration: Duration(seconds: 1)),
+                                );
+                              }
+                            },
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 14, right: 40),
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(18),
+                                    topRight: Radius.circular(18),
+                                    bottomLeft: Radius.circular(4),
+                                    bottomRight: Radius.circular(18),
+                                  ),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfacePrimary,
+                                        border: Border(
+                                          left: BorderSide(
+                                            color: isError ? AppColors.coralRed.withValues(alpha: 0.5) : AppColors.iceBlue.withValues(alpha: 0.2),
+                                            width: 2,
+                                          ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    item['content']!,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      height: 1.4,
-                                      color: Colors.white,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                isError ? Icons.error_outline : Icons.auto_awesome,
+                                                color: isError ? AppColors.coralRed : AppColors.iceBlue,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                isError ? "Hata" : "Sonuç",
+                                                style: AppTextStyles.microText.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isError ? AppColors.coralRed : AppColors.iceBlue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            item['content']!,
+                                            style: AppTextStyles.bodyText.copyWith(
+                                              height: 1.4,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -362,51 +426,67 @@ class _SmartCalculatorScreenState extends ConsumerState<SmartCalculatorScreen> {
 
               // Bottom Math Command Bar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.deepNightBlue,
-                  border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _isListening ? Icons.mic : Icons.mic_none,
-                        color: _isListening ? AppColors.coralRed : AppColors.iceBlue,
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1),
+                        borderRadius: BorderRadius.circular(28),
                       ),
-                      onPressed: _toggleListening,
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _inputController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: _isListening ? "Dinliyorum..." : "Formül veya soru yaz (Örn: 1500 * 0.18)",
-                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                          filled: true,
-                          fillColor: AppColors.darkNavy,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              _isListening ? Icons.mic : Icons.mic_none,
+                              color: _isListening ? AppColors.coralRed : AppColors.iceBlue,
+                            ),
+                            onPressed: _toggleListening,
                           ),
-                        ),
-                        onSubmitted: _processCalculation,
+                          Expanded(
+                            child: TextField(
+                              controller: _inputController,
+                              style: AppTextStyles.bodyText.copyWith(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: _isListening ? "Dinliyorum..." : "Formül veya soru yaz",
+                                hintStyle: AppTextStyles.bodyText.copyWith(color: Colors.white38),
+                                filled: true,
+                                fillColor: Colors.black.withValues(alpha: 0.2),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onSubmitted: _processCalculation,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _processCalculation(_inputController.text),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(colors: [AppColors.neonPurple, AppColors.iceBlue]),
+                              ),
+                              child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                            )
+                            .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                            .boxShadow(
+                                begin: const BoxShadow(color: Colors.transparent), 
+                                end: BoxShadow(color: AppColors.neonPurple.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2), 
+                                duration: 1500.ms
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _processCalculation(_inputController.text),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(colors: [AppColors.neonPurple, AppColors.iceBlue]),
-                        ),
-                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],

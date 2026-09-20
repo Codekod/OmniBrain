@@ -35,7 +35,7 @@ class OmniBrainBottomNav extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             height: 72,
             decoration: BoxDecoration(
@@ -119,7 +119,7 @@ class _NavBarItem extends StatelessWidget {
               curve: Curves.easeInOut,
               child: Icon(
                 item.icon,
-                size: 24,
+                size: isActive ? 26 : 24,
                 color: isActive
                     ? AppColors.neonPurple
                     : AppColors.textSecondary,
@@ -146,9 +146,11 @@ class _NavBarItem extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               height: 3,
-              width: isActive ? 20 : 0,
+              width: isActive ? 24 : 0,
               decoration: BoxDecoration(
-                color: AppColors.neonPurple,
+                gradient: const LinearGradient(
+                  colors: [AppColors.neonPurple, AppColors.iceBlue],
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -159,16 +161,38 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-class _BrainButton extends StatelessWidget {
+class _BrainButton extends StatefulWidget {
   final bool isActive;
   final VoidCallback onTap;
 
   const _BrainButton({required this.isActive, required this.onTap});
 
   @override
+  State<_BrainButton> createState() => _BrainButtonState();
+}
+
+class _BrainButtonState extends State<_BrainButton> with SingleTickerProviderStateMixin {
+  late AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: false);
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         width: 56,
         height: 56,
@@ -186,15 +210,39 @@ class _BrainButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: AppColors.neonPurple.withValues(alpha: 0.5),
-              blurRadius: isActive ? 18 : 10,
-              spreadRadius: isActive ? 2 : 0,
+              blurRadius: widget.isActive ? 18 : 10,
+              spreadRadius: widget.isActive ? 2 : 0,
             ),
           ],
         ),
-        child: const Icon(
-          Icons.auto_awesome,
-          color: Colors.white,
-          size: 26,
+        child: AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, child) {
+            final value = _shimmerController.value;
+            // Shimmer happens in the first 25% of the 8-second animation (2 seconds)
+            final shimmerValue = (value < 0.25) ? (value / 0.25) : 1.0;
+            return ShaderMask(
+              shaderCallback: (bounds) {
+                return LinearGradient(
+                  begin: Alignment(-2.0 + (shimmerValue * 4), 0),
+                  end: Alignment(-1.0 + (shimmerValue * 4), 0),
+                  colors: [
+                    Colors.white.withValues(alpha: 0.7),
+                    Colors.white,
+                    Colors.white.withValues(alpha: 0.7),
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ).createShader(bounds);
+              },
+              blendMode: BlendMode.srcATop,
+              child: child,
+            );
+          },
+          child: const Icon(
+            Icons.auto_awesome,
+            color: Colors.white,
+            size: 26,
+          ),
         ),
       ),
     );

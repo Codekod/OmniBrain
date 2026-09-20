@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,7 +120,7 @@ class _UniversalUnitConverterView extends ConsumerStatefulWidget {
   ConsumerState<_UniversalUnitConverterView> createState() => _UniversalUnitConverterViewState();
 }
 
-class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConverterView> {
+class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConverterView> with SingleTickerProviderStateMixin {
   final TextEditingController _amountController = TextEditingController(text: "1");
   final TextEditingController _naturalLanguageController = TextEditingController();
 
@@ -127,6 +128,7 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
   bool _isLoading = false;
   late stt.SpeechToText _speech;
   bool _isListening = false;
+  late AnimationController _rotationController;
 
   // Conversion Units per Category
   final Map<ConversionCategory, List<String>> _unitsByCategory = {
@@ -153,6 +155,10 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
     _speech = stt.SpeechToText();
     _fromUnit = 'USD';
     _toUnit = 'TRY';
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
 
     _calculateImmediateConversion();
   }
@@ -161,6 +167,7 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
   void dispose() {
     _amountController.dispose();
     _naturalLanguageController.dispose();
+    _rotationController.dispose();
     _speech.stop();
     super.dispose();
   }
@@ -178,6 +185,7 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
 
   void _swapUnits() {
     HapticFeedback.lightImpact();
+    _rotationController.forward(from: 0);
     setState(() {
       final temp = _fromUnit;
       _fromUnit = _toUnit;
@@ -443,6 +451,15 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
                       color: isSelected ? AppColors.amber : Colors.white.withValues(alpha: 0.1),
                       width: isSelected ? 1.5 : 1,
                     ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.amber.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            )
+                          ]
+                        : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -478,13 +495,29 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
             child: Column(
               children: [
                 // FROM CARD
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.glassCardGradient,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border(
+                          top: BorderSide(color: AppColors.borderHighlight),
+                          left: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+                          right: BorderSide(color: AppColors.borderSubtle),
+                          bottom: BorderSide(color: AppColors.borderSubtle),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.20),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          )
+                        ],
+                      ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -512,60 +545,93 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
                         ],
                       ),
                       const SizedBox(height: 12),
-                      TextField(
-                        controller: _amountController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.montserrat(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: MediaQuery.sizeOf(context).width - 80,
+                          child: TextField(
+                            controller: _amountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: GoogleFonts.montserrat(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (_) => _calculateImmediateConversion(),
+                          ),
                         ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (_) => _calculateImmediateConversion(),
                       ),
                     ],
                   ),
                 ),
+              ),
+            ),
 
-                // SWAP BUTTON
+            // SWAP BUTTON
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: GestureDetector(
                     onTap: _swapUnits,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.amber.withValues(alpha: 0.15),
-                        border: Border.all(color: AppColors.amber.withValues(alpha: 0.5)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.amber.withValues(alpha: 0.2),
-                            blurRadius: 12,
+                    child: AnimatedBuilder(
+                      animation: _rotationController,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: _rotationController.value * 3.14159265359,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.amber.withValues(alpha: 0.15),
+                              border: Border.all(color: AppColors.amber.withValues(alpha: 0.5)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.amber.withValues(alpha: 0.2),
+                                  blurRadius: 12,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.swap_vert_rounded,
+                              color: AppColors.amber,
+                              size: 26,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.swap_vert_rounded,
-                        color: AppColors.amber,
-                        size: 26,
-                      ),
+                        );
+                      }
                     ),
                   ),
                 ),
 
                 // TO CARD (RESULT)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkNavy,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.amber.withValues(alpha: 0.4)),
-                  ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.glassCardGradient,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border(
+                          top: BorderSide(color: AppColors.borderHighlight),
+                          left: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+                          right: BorderSide(color: AppColors.borderSubtle),
+                          bottom: BorderSide(color: AppColors.borderSubtle),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.20),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          )
+                        ],
+                      ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -636,8 +702,10 @@ class _UniversalUnitConverterViewState extends ConsumerState<_UniversalUnitConve
                     ],
                   ),
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
                 // Status Note
                 Container(

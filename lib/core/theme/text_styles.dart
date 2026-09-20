@@ -121,4 +121,43 @@ abstract final class AppTextStyles {
   static final TextStyle inputHint = input.copyWith(
     color: AppColors.textSecondary,
   );
+
+  // ─── Premium Numeric Styles ───────────────────────────────────────
+  /// Hero number – large balance / total display with tabular figures.
+  static final TextStyle heroNumber = GoogleFonts.montserrat(
+    fontSize: 42,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+    height: 1.1,
+    letterSpacing: -1.5,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+
+  /// Timer display – large countdown with tabular figures.
+  static final TextStyle timerDisplay = GoogleFonts.montserrat(
+    fontSize: 56,
+    fontWeight: FontWeight.w300,
+    color: AppColors.textPrimary,
+    height: 1.0,
+    letterSpacing: -1.0,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+
+  /// Numeric body – smaller tabular figure text for converters, stats.
+  static final TextStyle numericBody = GoogleFonts.montserrat(
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+    height: 1.2,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+
+  /// Badge text – small caps-like label for PRO badges, status pills.
+  static final TextStyle badge = GoogleFonts.inter(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+    height: 1.0,
+    letterSpacing: 0.8,
+  );
 }

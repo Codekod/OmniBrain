@@ -49,6 +49,26 @@ abstract final class AppColors {
   /// Divider / separator color.
   static final Color divider = Colors.white.withValues(alpha: 0.08);
 
+  // ─── Premium Surface Elevation ─────────────────────────────────
+  /// Primary card surface – slightly lifted from the base canvas.
+  static const Color surfacePrimary = Color(0xFF16181D);
+
+  /// Secondary surface – nested elements inside cards (inputs, chips).
+  static const Color surfaceSecondary = Color(0xFF21242C);
+
+  /// Tertiary surface – deeply nested / popover overlays.
+  static const Color surfaceTertiary = Color(0xFF2A2D38);
+
+  // ─── Premium Border Tokens ─────────────────────────────────────
+  /// Specular highlight – top-left edge glow simulating light source.
+  static final Color borderHighlight = Colors.white.withValues(alpha: 0.16);
+
+  /// Razor-thin subtle perimeter outline.
+  static final Color borderSubtle = Colors.white.withValues(alpha: 0.06);
+
+  /// Inner inset glow – 1px top highlight inside glassmorphic cards.
+  static final Color innerGlow = Colors.white.withValues(alpha: 0.12);
+
   // ─── Neon Glow Colors ─────────────────────────────────────────────
   /// Neon purple glow used for box-shadows / ambient light effects.
   static final Color neonPurpleGlow = neonPurple.withValues(alpha: 0.35);
@@ -110,6 +130,47 @@ abstract final class AppColors {
     colors: [
       Color(0xFF34D399),
       softGreen,
+    ],
+  );
+
+  // ─── Premium Gradients ────────────────────────────────────────
+  /// Aurora orb – purple radial glow for ambient background mesh.
+  static const RadialGradient auroraOrb1 = RadialGradient(
+    center: Alignment(-0.6, -0.5),
+    radius: 0.7,
+    colors: [
+      Color(0x1F8A2BE2), // neonPurple @ ~12%
+      Color(0x008A2BE2), // transparent
+    ],
+  );
+
+  /// Aurora orb – cyan radial glow for ambient background mesh.
+  static const RadialGradient auroraOrb2 = RadialGradient(
+    center: Alignment(0.7, 0.6),
+    radius: 0.6,
+    colors: [
+      Color(0x147DF9FF), // iceBlue @ ~8%
+      Color(0x007DF9FF), // transparent
+    ],
+  );
+
+  /// Glassmorphic card surface gradient – subtle top-left light.
+  static const LinearGradient glassCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x1AFFFFFF), // white @ 10%
+      Color(0x08FFFFFF), // white @ 3%
+    ],
+  );
+
+  /// Specular border gradient – simulates directional light hitting glass.
+  static const LinearGradient specularBorderGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x2AFFFFFF), // white @ 16%
+      Color(0x08FFFFFF), // white @ 3%
     ],
   );
 

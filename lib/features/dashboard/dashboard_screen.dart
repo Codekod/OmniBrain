@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
 import 'package:omnibrain_ai/core/constants/app_strings.dart';
@@ -247,10 +248,57 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          // Personalized greeting section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final hour = DateTime.now().hour;
+                  final greeting = hour < 12 ? 'Günaydın! 👋' : (hour < 18 ? 'Tünaydın! ☀️' : 'İyi Akşamlar! 🌙');
+                  final dateStr = DateFormat('d MMMM yyyy, EEEE', 'tr').format(DateTime.now());
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        style: AppTextStyles.pageTitle.copyWith(color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateStr,
+                        style: AppTextStyles.bodyText.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: AiCommandBar(),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          // Animated gradient divider
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppColors.borderHighlight,
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),

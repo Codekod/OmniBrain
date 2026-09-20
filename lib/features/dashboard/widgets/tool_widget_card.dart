@@ -1,15 +1,19 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-
+import 'package:omnibrain_ai/core/widgets/animated_press.dart';
+import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/theme/text_styles.dart';
 
 /// A single tool card for the dashboard grid with a premium Apple Home/Fintech aesthetic.
-class ToolWidgetCard extends StatefulWidget {
+class ToolWidgetCard extends StatelessWidget {
   final IconData iconData;
   final String name;
   final Color color;
   final VoidCallback? onTap;
+  final String? subtitle;
+  final String? badge;
+  final bool isHero;
 
   const ToolWidgetCard({
     super.key,
@@ -17,136 +21,137 @@ class ToolWidgetCard extends StatefulWidget {
     required this.name,
     required this.color,
     this.onTap,
+    this.subtitle,
+    this.badge,
+    this.isHero = false,
   });
 
   @override
-  State<ToolWidgetCard> createState() => _ToolWidgetCardState();
-}
-
-class _ToolWidgetCardState extends State<ToolWidgetCard> {
-  double _scale = 1.0;
-  bool _isPressed = false;
-
-  void _onTapDown(TapDownDetails _) {
-    setState(() {
-      _scale = 0.92;
-      _isPressed = true;
-    });
-  }
-
-  void _onTapUp(TapUpDetails _) {
-    setState(() {
-      _scale = 1.0;
-      _isPressed = false;
-    });
-    HapticFeedback.lightImpact();
-    widget.onTap?.call();
-  }
-
-  void _onTapCancel() {
-    setState(() {
-      _scale = 1.0;
-      _isPressed = false;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutCubic,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                // Koyu arka planın üstüne hafif bir renkli gradient (glow efekti)
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    widget.color.withValues(alpha: _isPressed ? 0.2 : 0.1),
-                    Colors.white.withValues(alpha: 0.02),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                // Premium ışık yansıması veren ince kenarlık (top-left daha parlak)
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  width: 1,
-                ),
+    return AnimatedPress(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap?.call();
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              // Koyu arka planın üstüne hafif bir renkli gradient (glow efekti)
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.15),
+                  Colors.white.withValues(alpha: 0.02),
+                ],
               ),
-              child: Stack(
-                children: [
-                  // Arka planda devasa silik ikon (Filigran tarzı)
-                  Positioned(
-                    right: -15,
-                    bottom: -15,
+              borderRadius: BorderRadius.circular(24),
+              // Premium ışık yansıması veren ince kenarlık (top-left daha parlak)
+              border: Border(
+                top: BorderSide(color: AppColors.borderHighlight, width: 1.5),
+                left: BorderSide(color: AppColors.borderHighlight, width: 1.5),
+                right: BorderSide(color: AppColors.borderSubtle, width: 1),
+                bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Arka planda devasa silik ikon (Filigran tarzı)
+                Positioned(
+                  right: -15,
+                  bottom: -15,
+                  child: Icon(
+                    iconData,
+                    size: isHero ? 100 : 80,
+                    color: color.withValues(alpha: 0.05),
+                  ),
+                ),
+                
+                // Sol üstte parlayan ikon
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withValues(alpha: 0.15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    ),
                     child: Icon(
-                      widget.iconData,
-                      size: 80,
-                      color: widget.color.withValues(alpha: 0.05),
+                      iconData,
+                      color: color,
+                      size: isHero ? 32 : 24,
                     ),
                   ),
-                  
-                  // Sol üstte parlayan ikon
+                ),
+
+                // Sağ üstte optional badge
+                if (badge != null)
                   Positioned(
                     top: 14,
-                    left: 14,
+                    right: 14,
                     child: Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: widget.color.withValues(alpha: 0.15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.color.withValues(alpha: _isPressed ? 0.4 : 0.2),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                          )
-                        ]
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
                       ),
-                      child: Icon(
-                        widget.iconData,
-                        color: widget.color,
-                        size: 24,
+                      child: Text(
+                        badge!,
+                        style: AppTextStyles.badge.copyWith(color: color),
                       ),
                     ),
                   ),
-                  
-                  // Sol altta metin (Apple tarzı yerleşim)
-                  Positioned(
-                    bottom: 14,
-                    left: 16,
-                    right: 8,
-                    child: SizedBox(
-                      height: 20,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          widget.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.9),
-                            letterSpacing: 0.2,
+                
+                // Sol altta metin (Apple tarzı yerleşim)
+                Positioned(
+                  bottom: 14,
+                  left: 16,
+                  right: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            name,
+                            style: AppTextStyles.cardTitle.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: AppTextStyles.microText.copyWith(
+                            color: AppColors.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
