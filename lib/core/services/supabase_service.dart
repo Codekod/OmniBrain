@@ -122,6 +122,10 @@ class SupabaseService {
       final userId = credential.userIdentifier ?? 'apple_${DateTime.now().millisecondsSinceEpoch}';
       final email = credential.email;
 
+      String finalUserId = userId;
+      String? finalEmail = email;
+      String finalDisplayName = fullName.isNotEmpty ? fullName : 'Apple Kullanıcısı';
+
       // Try Supabase sync in background (if configured and reachable)
       final idToken = credential.identityToken;
       if (idToken != null) {
@@ -131,8 +135,12 @@ class SupabaseService {
             idToken: idToken,
             nonce: rawNonce,
           );
-          if (response.user != null && fullName.isNotEmpty && (response.user!.userMetadata?['full_name'] ?? '').isEmpty) {
-            await _client.auth.updateUser(UserAttributes(data: {'full_name': fullName}));
+          if (response.user != null) {
+            finalUserId = response.user!.id;
+            finalEmail = response.user!.email ?? finalEmail;
+            if (fullName.isNotEmpty && (response.user!.userMetadata?['full_name'] ?? '').isEmpty) {
+              await _client.auth.updateUser(UserAttributes(data: {'full_name': fullName}));
+            }
           }
           debugPrint('[Supabase] Apple Sign-In synced with Supabase successfully.');
         } catch (e) {
@@ -141,9 +149,9 @@ class SupabaseService {
       }
 
       return SocialAuthResult.success(
-        userId: userId,
-        displayName: fullName.isNotEmpty ? fullName : 'Apple Kullanıcısı',
-        email: email ?? 'apple.user@icloud.com',
+        userId: finalUserId,
+        displayName: finalDisplayName,
+        email: finalEmail ?? 'apple.user@icloud.com',
       );
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
@@ -195,17 +203,25 @@ class SupabaseService {
         return SocialAuthResult.cancelled();
       }
 
+      String finalUserId = googleUser.id;
+      String? finalEmail = googleUser.email;
+      String finalDisplayName = googleUser.displayName ?? 'Google Kullanıcısı';
+
       // Try Supabase sync in background
       try {
         final googleAuth = await googleUser.authentication;
         final idToken = googleAuth.idToken;
         final accessToken = googleAuth.accessToken;
         if (idToken != null) {
-          await _client.auth.signInWithIdToken(
+          final response = await _client.auth.signInWithIdToken(
             provider: OAuthProvider.google,
             idToken: idToken,
             accessToken: accessToken,
           );
+          if (response.user != null) {
+            finalUserId = response.user!.id;
+            finalEmail = response.user!.email ?? finalEmail;
+          }
           debugPrint('[Supabase] Google Sign-In synced with Supabase.');
         }
       } catch (e) {
@@ -213,9 +229,9 @@ class SupabaseService {
       }
 
       return SocialAuthResult.success(
-        userId: googleUser.id,
-        displayName: googleUser.displayName ?? 'Google Kullanıcısı',
-        email: googleUser.email,
+        userId: finalUserId,
+        displayName: finalDisplayName,
+        email: finalEmail,
       );
     } catch (e) {
       debugPrint('[Google Sign-In error]: $e');
