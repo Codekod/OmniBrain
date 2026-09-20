@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/services/expense_export_service.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/core/widgets/omnibrain_camera_view.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
@@ -403,6 +404,40 @@ class _DocumentScannerScreenState extends ConsumerState<DocumentScannerScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.softGreen,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shadowColor: AppColors.softGreen.withValues(alpha: 0.4),
+              elevation: 8,
+            ),
+            icon: const Icon(Icons.table_chart_rounded, color: Colors.black87),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Excel Masraf Raporu İndir',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('PRO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87)),
+                ),
+              ],
+            ),
+            onPressed: () => ExpenseExportService.exportToExcel(
+              context: context,
+              ref: ref,
+              scanData: data,
+            ),
+          ),
+          const SizedBox(height: 12),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.neonPurple,

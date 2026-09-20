@@ -4,11 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/providers/revenuecat_provider.dart';
+import 'package:omnibrain_ai/core/routing/app_router.dart';
+import 'package:omnibrain_ai/core/services/ambient_sound_service.dart';
 import 'package:omnibrain_ai/core/theme/text_styles.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/features/pomodoro/providers/pomodoro_providers.dart';
+import 'package:omnibrain_ai/features/pomodoro/widgets/focus_tree_view.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 
 class PomodoroScreen extends ConsumerStatefulWidget {
@@ -273,13 +278,21 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      FocusTreeView(
+                        progress: pomodoroState.totalSeconds > 0
+                            ? (pomodoroState.totalSeconds - pomodoroState.remainingSeconds) / pomodoroState.totalSeconds
+                            : 0.0,
+                        isRunning: pomodoroState.isRunning,
+                        isBreak: pomodoroState.isBreak,
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         '$minutes:$seconds',
                         style: GoogleFonts.montserrat(
-                          fontSize: 62,
+                          fontSize: 46,
                           fontWeight: FontWeight.w200,
                           color: Colors.white,
-                          letterSpacing: -2,
+                          letterSpacing: -1,
                         ),
                       ),
                       if (!pomodoroState.isRunning &&
@@ -376,6 +389,9 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
               ),
 
               const Spacer(),
+
+              // Ambient Sounds Selector (Rain, Forest, Campfire, Waves, White Noise)
+              _buildAmbientSoundsBar(context, ref),
 
               // Session Status Message (Clean, non-redundant)
               Padding(
@@ -482,6 +498,136 @@ class _PomodoroScreenState extends ConsumerState<PomodoroScreen>
           border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Icon(icon, color: color, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildAmbientSoundsBar(BuildContext context, WidgetRef ref) {
+    final ambientState = ref.watch(ambientSoundProvider);
+    final isPro = ref.watch(isProProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.headphones_rounded, color: AppColors.iceBlue, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Odaklanma Doğa Sesleri',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              if (ambientState.isPlaying)
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(ambientSoundProvider.notifier).pause();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.iceBlue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.volume_up_rounded, color: AppColors.iceBlue, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Çalıyor',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.iceBlue),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: ambientTracks.map((track) {
+                final isSelected = ambientState.activeTrackId == track.id;
+                final isTrackPlaying = isSelected && ambientState.isPlaying;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (track.isPro && !isPro) {
+                        context.push(RoutePaths.paywall);
+                      } else {
+                        ref.read(ambientSoundProvider.notifier).toggleTrack(track);
+                      }
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isTrackPlaying
+                            ? AppColors.neonPurple.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isTrackPlaying
+                              ? AppColors.iceBlue
+                              : (track.isPro && !isPro
+                                  ? AppColors.amber.withValues(alpha: 0.3)
+                                  : Colors.white.withValues(alpha: 0.1)),
+                          width: isTrackPlaying ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(track.icon, style: const TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          Text(
+                            track.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: isTrackPlaying ? FontWeight.bold : FontWeight.w500,
+                              color: isTrackPlaying ? Colors.white : Colors.white70,
+                            ),
+                          ),
+                          if (track.isPro && !isPro) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'PRO',
+                                style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.amber),
+                              ),
+                            ),
+                          ] else if (isTrackPlaying) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.graphic_eq_rounded, color: AppColors.iceBlue, size: 14),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

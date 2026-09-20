@@ -11,6 +11,7 @@ import 'package:omnibrain_ai/core/constants/app_colors.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/domain/entities/note.dart';
 import 'package:omnibrain_ai/features/notes/providers/notes_providers.dart';
+import 'package:omnibrain_ai/features/notes/widgets/voice_meeting_sheet.dart';
 import 'package:omnibrain_ai/presentation/providers/app_providers.dart';
 import 'package:omnibrain_ai/l10n/app_localizations.dart';
 
@@ -389,6 +390,19 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
             ],
           ),
           actions: [
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.iceBlue.withValues(alpha: 0.2),
+                  border: Border.all(color: AppColors.iceBlue.withValues(alpha: 0.5)),
+                ),
+                child: const Icon(Icons.mic_rounded, color: AppColors.iceBlue, size: 20),
+              ),
+              tooltip: 'Sesli Toplantı Kaydı (AI)',
+              onPressed: () => VoiceMeetingSheet.show(context),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: IconButton(

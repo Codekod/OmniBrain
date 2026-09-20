@@ -143,3 +143,12 @@ class GeminiChatNotifier extends StateNotifier<ChatState> {
 final geminiChatProvider = StateNotifierProvider<GeminiChatNotifier, ChatState>((ref) {
   return GeminiChatNotifier(ref);
 });
+
+final geminiModelProvider = Provider<GenerativeModel?>((ref) {
+  final apiKey = dotenv.env['GEMINI_API_KEY'];
+  if (apiKey == null || apiKey.isEmpty) return null;
+  return GenerativeModel(
+    model: 'gemini-2.5-flash',
+    apiKey: apiKey,
+  );
+});

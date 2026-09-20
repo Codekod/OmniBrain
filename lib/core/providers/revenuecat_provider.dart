@@ -120,3 +120,7 @@ class RevenueCatNotifier extends StateNotifier<RevenueCatState> {
 final revenueCatProvider = StateNotifierProvider<RevenueCatNotifier, RevenueCatState>((ref) {
   return RevenueCatNotifier();
 });
+
+final isProProvider = Provider<bool>((ref) {
+  return ref.watch(revenueCatProvider).isPro;
+});

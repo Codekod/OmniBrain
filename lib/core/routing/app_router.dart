@@ -18,6 +18,7 @@ import 'package:omnibrain_ai/presentation/widgets/bottom_nav_bar.dart';
 import 'package:omnibrain_ai/core/providers/shared_prefs_provider.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
+import 'package:omnibrain_ai/core/widgets/in_app_dynamic_island.dart';
 import 'package:omnibrain_ai/features/dashboard/widgets/smart_tool_grid.dart';
 
 // ─── Route Paths ────────────────────────────────────────────────────────────
@@ -103,7 +104,17 @@ class _MainShellScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: navigationShell,
+      body: Stack(
+        children: [
+          navigationShell,
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: InAppDynamicIsland(),
+          ),
+        ],
+      ),
       bottomNavigationBar: OmniBrainBottomNav(
         onTabChanged: (index) {
           navigationShell.goBranch(
