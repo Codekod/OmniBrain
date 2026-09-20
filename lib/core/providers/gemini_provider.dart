@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 
 import 'package:omnibrain_ai/core/models/chat_message.dart';
 import 'package:omnibrain_ai/core/providers/revenuecat_provider.dart';
-import 'package:omnibrain_ai/core/providers/shared_prefs_provider.dart';
 import 'package:omnibrain_ai/core/providers/usage_limit_provider.dart';
 
 class ChatState {

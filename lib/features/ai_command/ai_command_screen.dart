@@ -1,5 +1,5 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -236,9 +236,13 @@ class _AiCommandScreenState extends ConsumerState<AiCommandScreen> {
     final remaining = ref.watch(geminiChatProvider.notifier).remainingFreeMessages;
     final isPro = remaining > 100; // Just a quick check for PRO
 
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 0;
+    final bottomPad = isKeyboardOpen ? 12.0 : (MediaQuery.of(context).padding.bottom + 84.0);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(
-        bottom: MediaQuery.of(context).padding.bottom + 12,
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(
+        bottom: bottomPad,
       ),
       decoration: BoxDecoration(
         color: AppColors.deepNightBlue.withValues(alpha: 0.95),

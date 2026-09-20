@@ -221,7 +221,7 @@ abstract final class OmniBrainTheme {
           backgroundColor: AppColors.neonPurple,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
-          minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
+          minimumSize: const Size(64, AppSizes.buttonHeight),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSizes.radiusSm),
           ),

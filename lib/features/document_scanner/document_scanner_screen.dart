@@ -234,31 +234,61 @@ class _DocumentScannerScreenState extends ConsumerState<DocumentScannerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonPurple,
+              GestureDetector(
+                onTap: _openCamera,
+                child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(
+                    color: AppColors.neonPurple,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.neonPurple.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Kamera ile Tara',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-                icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
-                label: const Text('Kamera ile Tara', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                onPressed: _openCamera,
               ),
               const SizedBox(width: 12),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              GestureDetector(
+                onTap: _pickFromGallery,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.photo_library_rounded, color: AppColors.iceBlue, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Galeriden Seç',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-                icon: const Icon(Icons.photo_library_rounded, color: AppColors.iceBlue, size: 20),
-                label: const Text('Galeriden Seç', style: TextStyle(color: Colors.white)),
-                onPressed: _pickFromGallery,
               ),
             ],
           ),
         ],
-      ).animate().fadeIn(),
+      ),
     );
   }
 

@@ -854,8 +854,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen>
   }
 
   Widget _buildChatInputArea() {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 0;
+    final bottomPad = isKeyboardOpen ? 12.0 : (MediaQuery.of(context).padding.bottom + 84.0);
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPad),
       decoration: BoxDecoration(
         color: AppColors.deepNightBlue,
         border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),

@@ -537,12 +537,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen>
                   decoration: BoxDecoration(shape: BoxShape.circle, color: color),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -846,12 +849,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen>
                                           color: isOverdue ? AppColors.coralRed : AppColors.amber,
                                         ),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          DateFormat('dd MMM yyyy, HH:mm', 'tr').format(reminder.dueDate),
-                                          style: TextStyle(
-                                            color: isOverdue ? AppColors.coralRed : AppColors.amber,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
+                                        Flexible(
+                                          child: Text(
+                                            DateFormat('dd MMM yyyy, HH:mm', 'tr').format(reminder.dueDate),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: isOverdue ? AppColors.coralRed : AppColors.amber,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
                                         ),
                                         if (isOverdue) ...[
