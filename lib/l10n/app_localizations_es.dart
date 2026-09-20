@@ -66,69 +66,68 @@ class AppLocalizationsEs extends AppLocalizations {
   String get toolNoteDesc => 'Cuaderno inteligente';
 
   @override
-  String get toolReminderDesc => 'Establecer recordatorio';
+  String get toolReminderDesc => 'Crear recordatorio';
 
   @override
-  String get aiCommandPlaceholder =>
-      '¿Qué te gustaría que hiciera? Escribe un comando...';
+  String get aiCommandPlaceholder => '¿Qué deseas hacer? Escribe un comando...';
 
   @override
-  String get aiCommandHint => 'ej. \"convierte 100 dólares a EUR\"';
+  String get aiCommandHint => 'Ej: \"convertir 100 dólares a euros\"';
 
   @override
-  String get aiCommandTitle => 'Centro de Comando IA';
+  String get aiCommandTitle => 'Centro de comandos IA';
 
   @override
   String get aiThinking => 'Pensando...';
 
   @override
-  String get aiError => 'Ocurrió un error. Por favor inténtalo de nuevo.';
+  String get aiError => 'Ocurrió un error. Inténtalo de nuevo.';
 
   @override
   String get onboardingTitle1 => 'Bienvenido a OmniBrain AI';
 
   @override
   String get onboardingBody1 =>
-      'Todas tus herramientas diarias impulsadas por inteligencia artificial.';
+      'Todas tus herramientas diarias potenciadas por inteligencia artificial.';
 
   @override
-  String get onboardingTitle2 => 'Herramientas Inteligentes';
+  String get onboardingTitle2 => 'Herramientas inteligentes';
 
   @override
   String get onboardingBody2 =>
-      'Calcular, escanear, convertir, temporizador y más.';
+      'Calcula, escanea, convierte, temporizador y mucho más.';
 
   @override
-  String get onboardingTitle3 => 'Ejecuta con un solo comando';
+  String get onboardingTitle3 => 'Ejecuta con un comando';
 
   @override
   String get onboardingBody3 =>
-      'Escribe en la línea de comandos de IA, OmniBrain hace el resto.';
+      'Escribe en la línea de comando IA, OmniBrain hace el resto.';
 
   @override
-  String get onboardingCta => 'Comencemos';
+  String get onboardingCta => 'Comenzar';
 
   @override
-  String get onboardingSkip => 'Omitir';
+  String get onboardingSkip => 'Saltar';
 
   @override
   String get onboardingNext => 'Continuar';
 
   @override
-  String get onboardingPurposeTitle => 'Personalicemos para ti';
+  String get onboardingPurposeTitle => 'Personalicemos tu experiencia';
 
   @override
   String get onboardingPurposeSubtitle =>
-      '¿Para qué propósito principal usarás OmniBrain?';
+      '¿Cuál es tu objetivo principal al usar OmniBrain?';
 
   @override
-  String get onboardingPurposeWork => 'Trabajo & Productividad';
+  String get onboardingPurposeWork => 'Trabajo y Productividad';
 
   @override
-  String get onboardingPurposeEducation => 'Educación & Escuela';
+  String get onboardingPurposeEducation => 'Educación y Escuela';
 
   @override
-  String get onboardingPurposeDaily => 'Vida diaria & Finanzas';
+  String get onboardingPurposeDaily => 'Vida diaria y Finanzas';
 
   @override
   String get onboardingPreparing => 'Preparando para ti...';
@@ -146,10 +145,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dashboardFavorites => 'Favoritos';
 
   @override
-  String get notesTitle => 'Mis notas';
+  String get notesTitle => 'Mis Notas';
 
   @override
-  String get notesEmpty => 'No hay notas añadidas aún.';
+  String get notesEmpty => 'No hay notas aún.';
 
   @override
   String get notesNewNote => 'Nueva Nota';
@@ -203,36 +202,91 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownError => 'Ocurrió un error desconocido.';
 
   @override
-  String get paywallRestore => 'Restaurar compras';
+  String get paywallRestore => 'Restaurar Compras';
 
   @override
   String get paywallDisclaimer =>
-      'Puedes cancelar en cualquier momento. El pago se cargará a tu cuenta de App Store.';
+      'Cancela en cualquier momento. El cobro se realizará a tu cuenta de App Store.';
 
   @override
-  String get privacyPolicy => 'Política de privacidad';
+  String get privacyPolicy => 'Política de Privacidad';
 
   @override
   String get privacyPolicyContent =>
-      'Sus datos (notas, recordatorios) se almacenan de forma segura solo en su dispositivo. No se almacenan datos personales en nuestros servidores.';
+      'Tus datos se almacenan de forma segura únicamente en tu dispositivo.';
 
   @override
-  String get termsOfUse => 'Condiciones de uso (EULA)';
+  String get termsOfUse => 'Condiciones de Uso (EULA)';
 
   @override
   String get termsOfUseContent =>
-      'Al usar la aplicación OmniBrain AI, acepta los términos del Acuerdo de licencia estándar de Apple (EULA). Los resultados generados por IA son para fines informativos.';
+      'Al usar la app aceptas los términos estándar EULA de Apple.';
 
   @override
-  String get paywallSuccess => '¡Compra exitosa! Funciones PRO activas.';
+  String get paywallSuccess => '¡Compra exitosa! Funciones PRO desbloqueadas.';
 
   @override
-  String get paywallFailure => 'No se pudo completar la compra o se canceló.';
+  String get paywallFailure => 'La compra no se completó.';
 
   @override
   String get paywallRestoreSuccess => '¡Compras restauradas con éxito!';
 
   @override
   String get paywallRestoreFailure =>
-      'No se encontró ninguna compra válida para restaurar.';
+      'No se encontraron compras válidas para restaurar.';
+
+  @override
+  String get language => 'Idioma';
+
+  @override
+  String get selectLanguage => 'Seleccionar Idioma';
+
+  @override
+  String get systemLanguage => 'Idioma del Sistema (Automático)';
+
+  @override
+  String get onboardingReplay => 'Ver introducción';
+
+  @override
+  String get onboardingFeature1Badge => 'OCR Y GASTOS';
+
+  @override
+  String get onboardingFeature1Title => 'Escáner de recibos y documentos';
+
+  @override
+  String get onboardingFeature1Desc =>
+      'Escanea recibos al instante, suma importes y expórtalos en reportes de Excel.';
+
+  @override
+  String get onboardingFeature2Badge => '2º CEREBRO Y VOZ';
+
+  @override
+  String get onboardingFeature2Title => 'Asistente de voz y notas IA';
+
+  @override
+  String get onboardingFeature2Desc =>
+      'Resume reuniones y audios en un clic, convirtiéndolos en listas de acción.';
+
+  @override
+  String get onboardingFeature3Badge => 'ENFOQUE Y TIMER';
+
+  @override
+  String get onboardingFeature3Title => 'Isla Dinámica y Pomodoro';
+
+  @override
+  String get onboardingFeature3Desc =>
+      'Sigue tus sesiones en la pantalla de bloqueo e Isla Dinámica con sonidos relajantes.';
+
+  @override
+  String get onboardingFeature4Badge => 'TODO EN UNO';
+
+  @override
+  String get onboardingFeature4Title => 'Conversor y Calculadora IA';
+
+  @override
+  String get onboardingFeature4Desc =>
+      'Tipos de cambio en vivo, conversor de unidades y calculadora paso a paso.';
+
+  @override
+  String get onboardingStartExploring => 'Comenzar a explorar';
 }

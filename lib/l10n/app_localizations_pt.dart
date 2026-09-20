@@ -39,13 +39,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get toolScan => 'Escanear';
 
   @override
-  String get toolPomodoro => 'Temporizador';
+  String get toolPomodoro => 'Timer';
 
   @override
   String get toolConvert => 'Converter';
 
   @override
-  String get toolNote => 'Tomar Nota';
+  String get toolNote => 'Criar Nota';
 
   @override
   String get toolReminder => 'Lembrete';
@@ -57,56 +57,56 @@ class AppLocalizationsPt extends AppLocalizations {
   String get toolScanDesc => 'Escanear texto com OCR';
 
   @override
-  String get toolPomodoroDesc => 'Temporizador Pomodoro';
+  String get toolPomodoroDesc => 'Timer Pomodoro';
 
   @override
   String get toolConvertDesc => 'Conversor de unidades e moedas';
 
   @override
-  String get toolNoteDesc => 'Caderno inteligente';
+  String get toolNoteDesc => 'Bloco de notas inteligente';
 
   @override
-  String get toolReminderDesc => 'Definir lembrete';
+  String get toolReminderDesc => 'Criar lembrete';
 
   @override
   String get aiCommandPlaceholder =>
-      'O que você gostaria que eu fizesse? Escreva um comando...';
+      'O que você deseja fazer? Digite um comando...';
 
   @override
-  String get aiCommandHint => 'ex. \"converta 100 dólares em EUR\"';
+  String get aiCommandHint => 'Ex: \"converter 100 dólares para reais\"';
 
   @override
-  String get aiCommandTitle => 'Centro de Comando IA';
+  String get aiCommandTitle => 'Central de Comandos IA';
 
   @override
   String get aiThinking => 'Pensando...';
 
   @override
-  String get aiError => 'Ocorreu um erro. Por favor tente novamente.';
+  String get aiError => 'Ocorreu um erro. Tente novamente.';
 
   @override
   String get onboardingTitle1 => 'Bem-vindo ao OmniBrain AI';
 
   @override
   String get onboardingBody1 =>
-      'Todas as suas ferramentas diárias impulsionadas por inteligência artificial.';
+      'Todas as suas ferramentas diárias potencializadas por inteligência artificial.';
 
   @override
   String get onboardingTitle2 => 'Ferramentas Inteligentes';
 
   @override
   String get onboardingBody2 =>
-      'Calcular, escanear, converter, temporizador e mais.';
+      'Calcule, escaneie, converta, cronometre e muito mais.';
 
   @override
-  String get onboardingTitle3 => 'Execute com um único comando';
+  String get onboardingTitle3 => 'Execute com um Comando';
 
   @override
   String get onboardingBody3 =>
-      'Digite na linha de comando de IA, OmniBrain faz o resto.';
+      'Digite na linha de comando IA, o OmniBrain cuida do resto.';
 
   @override
-  String get onboardingCta => 'Comecemos';
+  String get onboardingCta => 'Começar';
 
   @override
   String get onboardingSkip => 'Pular';
@@ -119,16 +119,16 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get onboardingPurposeSubtitle =>
-      'Para qual propósito você usará principalmente o OmniBrain?';
+      'Qual é o seu objetivo principal com o OmniBrain?';
 
   @override
-  String get onboardingPurposeWork => 'Trabalho & Produtividade';
+  String get onboardingPurposeWork => 'Trabalho e Produtividade';
 
   @override
-  String get onboardingPurposeEducation => 'Educação & Escola';
+  String get onboardingPurposeEducation => 'Educação e Estudos';
 
   @override
-  String get onboardingPurposeDaily => 'Vida diária & Finanças';
+  String get onboardingPurposeDaily => 'Dia a dia e Finanças';
 
   @override
   String get onboardingPreparing => 'Preparando para você...';
@@ -146,7 +146,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get dashboardFavorites => 'Favoritos';
 
   @override
-  String get notesTitle => 'Minhas notas';
+  String get notesTitle => 'Minhas Notas';
 
   @override
   String get notesEmpty => 'Nenhuma nota adicionada ainda.';
@@ -161,7 +161,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get profileTitle => 'Perfil';
 
   @override
-  String get profileSettings => 'Ajustes';
+  String get profileSettings => 'Configurações';
 
   @override
   String get profileAbout => 'Sobre';
@@ -203,37 +203,91 @@ class AppLocalizationsPt extends AppLocalizations {
   String get unknownError => 'Ocorreu um erro desconhecido.';
 
   @override
-  String get paywallRestore => 'Restaurar compras';
+  String get paywallRestore => 'Restaurar Compras';
 
   @override
   String get paywallDisclaimer =>
-      'Você pode cancelar a qualquer momento. O pagamento será cobrado na sua conta da App Store.';
+      'Cancele a qualquer momento. O pagamento será cobrado na sua conta App Store.';
 
   @override
-  String get privacyPolicy => 'Política de privacidade';
+  String get privacyPolicy => 'Política de Privacidade';
 
   @override
   String get privacyPolicyContent =>
-      'Seus dados (notes, lembretes) são armazenados com segurança apenas no seu dispositivo. Nenhum dados pessoal é armazenado em nossos servidores.';
+      'Seus dados ficam armazenados com segurança apenas no seu dispositivo.';
 
   @override
-  String get termsOfUse => 'Termos de uso (EULA)';
+  String get termsOfUse => 'Termos de Uso (EULA)';
 
   @override
   String get termsOfUseContent =>
-      'Ao usar o aplicativo OmniBrain AI, você concorda com os termos do Contrato de Licença Padrão da Apple (EULA). Os resultados gerados por IA são para fins informativos.';
+      'Ao usar o app você aceita os termos padrão EULA da Apple.';
 
   @override
-  String get paywallSuccess => 'Compra bem-sucedida! Recursos PRO ativos.';
+  String get paywallSuccess =>
+      'Compra realizada com sucesso! Recursos PRO liberados.';
 
   @override
-  String get paywallFailure =>
-      'A compra não pôde ser concluída ou foi cancelada.';
+  String get paywallFailure => 'A compra não pôde ser concluída.';
 
   @override
   String get paywallRestoreSuccess => 'Compras restauradas com sucesso!';
 
   @override
-  String get paywallRestoreFailure =>
-      'Nenhuma compra válida encontrada para restaurar.';
+  String get paywallRestoreFailure => 'Nenhuma compra válida encontrada.';
+
+  @override
+  String get language => 'Idioma';
+
+  @override
+  String get selectLanguage => 'Selecionar Idioma';
+
+  @override
+  String get systemLanguage => 'Idioma do Sistema (Auto)';
+
+  @override
+  String get onboardingReplay => 'Ver introdução';
+
+  @override
+  String get onboardingFeature1Badge => 'OCR & DESPESAS';
+
+  @override
+  String get onboardingFeature1Title => 'Scanner de recibos e notas';
+
+  @override
+  String get onboardingFeature1Desc =>
+      'Digitalize recibos instantaneamente, some valores e exporte para relatórios no Excel.';
+
+  @override
+  String get onboardingFeature2Badge => '2º CÉREBRO & VOZ';
+
+  @override
+  String get onboardingFeature2Title => 'Assistente de voz e notas IA';
+
+  @override
+  String get onboardingFeature2Desc =>
+      'Resuma reuniões e áudios com um toque, transformando pensamentos em planos de ação.';
+
+  @override
+  String get onboardingFeature3Badge => 'FOCO & TIMER';
+
+  @override
+  String get onboardingFeature3Title => 'Ilha Dinâmica e Pomodoro';
+
+  @override
+  String get onboardingFeature3Desc =>
+      'Acompanhe suas sessões na tela de bloqueio e Ilha Dinâmica com sons da natureza.';
+
+  @override
+  String get onboardingFeature4Badge => 'TUDO EM UM';
+
+  @override
+  String get onboardingFeature4Title => 'Conversor e Calculadora IA';
+
+  @override
+  String get onboardingFeature4Desc =>
+      'Câmbio em tempo real, conversor de unidades e calculadora com passo a passo.';
+
+  @override
+  String get onboardingStartExploring => 'Começar a explorar';
 }

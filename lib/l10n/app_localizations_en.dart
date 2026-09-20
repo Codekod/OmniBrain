@@ -206,32 +206,86 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallDisclaimer =>
-      'You can cancel at any time. Payment will be charged to your App Store account.';
+      'You can cancel anytime. Payment will be charged to your App Store account.';
 
   @override
   String get privacyPolicy => 'Privacy Policy';
 
   @override
   String get privacyPolicyContent =>
-      'Your data (notes, reminders) is stored securely only on your device. No personal data is stored on our servers.';
+      'Your data (notes, reminders) is stored safely on your device. No personal data is kept on our servers.';
 
   @override
   String get termsOfUse => 'Terms of Use (EULA)';
 
   @override
   String get termsOfUseContent =>
-      'By using the OmniBrain AI app, you agree to the Apple Standard License Agreement (EULA) terms. AI-generated results are for informational purposes.';
+      'By using OmniBrain AI, you agree to Apple\'s Standard End User License Agreement (EULA). AI-generated outputs are for informational purposes.';
 
   @override
-  String get paywallSuccess => 'Purchase successful! PRO features active.';
+  String get paywallSuccess => 'Purchase successful! PRO features unlocked.';
 
   @override
-  String get paywallFailure =>
-      'Purchase could not be completed or was canceled.';
+  String get paywallFailure => 'Purchase was not completed or was cancelled.';
 
   @override
   String get paywallRestoreSuccess => 'Purchases successfully restored!';
 
   @override
   String get paywallRestoreFailure => 'No valid purchase found to restore.';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get selectLanguage => 'Select Language';
+
+  @override
+  String get systemLanguage => 'System Language (Auto)';
+
+  @override
+  String get onboardingReplay => 'View App Introduction';
+
+  @override
+  String get onboardingFeature1Badge => 'OCR & EXPENSE';
+
+  @override
+  String get onboardingFeature1Title => 'Smart Receipt & Doc Scanner';
+
+  @override
+  String get onboardingFeature1Desc =>
+      'Scan receipts and invoices in seconds, auto-calculate totals and export to Excel/Accounting expense reports.';
+
+  @override
+  String get onboardingFeature2Badge => '2ND BRAIN & VOICE';
+
+  @override
+  String get onboardingFeature2Title => 'AI Voice Assistant & Notes';
+
+  @override
+  String get onboardingFeature2Desc =>
+      'Summarize meetings and audio recordings with one tap, turning thoughts into organized action items.';
+
+  @override
+  String get onboardingFeature3Badge => 'FOCUS & TIMER';
+
+  @override
+  String get onboardingFeature3Title => 'Dynamic Island & Pomodoro';
+
+  @override
+  String get onboardingFeature3Desc =>
+      'Track focus sessions seamlessly on your lock screen & dynamic island with soothing ambient sounds.';
+
+  @override
+  String get onboardingFeature4Badge => 'ALL-IN-ONE TOOLS';
+
+  @override
+  String get onboardingFeature4Title => 'Smart Converter & Calculator';
+
+  @override
+  String get onboardingFeature4Desc =>
+      'Live currency exchange rates, multi-unit converter and AI-powered step-by-step problem solver.';
+
+  @override
+  String get onboardingStartExploring => 'Start Exploring';
 }

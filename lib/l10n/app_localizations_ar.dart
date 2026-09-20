@@ -12,10 +12,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appName => 'OmniBrain AI';
 
   @override
-  String get slogan => 'تبسيط الحياة باستخدام الذكاء الاصطناعي';
+  String get slogan => 'تبسيط الحياة بالذكاء الاصطناعي';
 
   @override
-  String get tagline => 'كل شيء في مكان واحد.';
+  String get tagline => 'كل ما تحتاجه في مكان واحد.';
 
   @override
   String get tabDashboard => 'الرئيسية';
@@ -24,7 +24,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tabTools => 'الأدوات';
 
   @override
-  String get tabAiCommand => 'أمر ذكاء اصطناعي';
+  String get tabAiCommand => 'أمر ذكي';
 
   @override
   String get tabNotes => 'الملاحظات';
@@ -33,52 +33,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tabProfile => 'الملف الشخصي';
 
   @override
-  String get toolCalculate => 'احسب';
+  String get toolCalculate => 'حساب';
 
   @override
-  String get toolScan => 'امسح ضوئياً';
+  String get toolScan => 'مسح';
 
   @override
-  String get toolPomodoro => 'المؤقت';
+  String get toolPomodoro => 'مؤقت';
 
   @override
-  String get toolConvert => 'حول';
+  String get toolConvert => 'تحويل';
 
   @override
-  String get toolNote => 'دون ملاحظة';
+  String get toolNote => 'تدوين';
 
   @override
   String get toolReminder => 'تذكير';
 
   @override
-  String get toolCalculateDesc => 'آلة حاسبة متطورة';
+  String get toolCalculateDesc => 'آلة حاسبة ذكية متطورة';
 
   @override
-  String get toolScanDesc => 'مسح النص باستخدام OCR';
+  String get toolScanDesc => 'مسح النصوص ضوئياً OCR';
 
   @override
-  String get toolPomodoroDesc => 'مؤقت بومودورو';
+  String get toolPomodoroDesc => 'مؤقت بومودورو للتركيز';
 
   @override
-  String get toolConvertDesc => 'محول الوحدات والعملات';
+  String get toolConvertDesc => 'محول العملات والوحدات';
 
   @override
   String get toolNoteDesc => 'دفتر ملاحظات ذكي';
 
   @override
-  String get toolReminderDesc => 'ضبط تذكير';
+  String get toolReminderDesc => 'تعيين تذكير';
 
   @override
-  String get aiCommandPlaceholder => 'ماذا تريد مني أن أفعل؟ اكتب أمراً...';
+  String get aiCommandPlaceholder => 'ما الذي تود أن أفعله؟ اكتب أمراً...';
 
   @override
-  String get aiCommandHint => 'مثال: \"حول 100 دولار إلى يورو\"';
+  String get aiCommandHint => 'مثال: \"حول 100 دولار إلى ريال\"';
 
   @override
   String get aiCommandTitle => 'مركز أوامر الذكاء الاصطناعي';
 
   @override
-  String get aiThinking => 'جاري التفكير...';
+  String get aiThinking => 'جارٍ التفكير...';
 
   @override
   String get aiError => 'حدث خطأ. يرجى المحاولة مرة أخرى.';
@@ -87,24 +87,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingTitle1 => 'مرحباً بك في OmniBrain AI';
 
   @override
-  String get onboardingBody1 => 'جميع أدواتك اليومية مدعومة بالذكاء الاصطناعي.';
+  String get onboardingBody1 =>
+      'جميع أدواتك اليومية معززة بأحدث تقنيات الذكاء الاصطناعي.';
 
   @override
-  String get onboardingTitle2 => 'أدوات ذكية';
+  String get onboardingTitle2 => 'أدوات ذكية متكاملة';
 
   @override
-  String get onboardingBody2 =>
-      'الحساب، المسح الضوئي، التحويل، المؤقت والمزيد.';
+  String get onboardingBody2 => 'حساب، مسح، تحويل، مؤقت تركيز والمزيد.';
 
   @override
-  String get onboardingTitle3 => 'التشغيل بأمر واحد';
+  String get onboardingTitle3 => 'تنفيذ بأمر واحد';
 
   @override
   String get onboardingBody3 =>
-      'اكتب في سطر أوامر الذكاء الاصطناعي، وسيقوم OmniBrain بالباقي.';
+      'اكتب في سطر الأوامر، ودع OmniBrain يتولى الباقي.';
 
   @override
-  String get onboardingCta => 'لنبدأ';
+  String get onboardingCta => 'ابدأ الآن';
 
   @override
   String get onboardingSkip => 'تخطي';
@@ -113,23 +113,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingNext => 'متابعة';
 
   @override
-  String get onboardingPurposeTitle => 'دعنا نخصص لك';
+  String get onboardingPurposeTitle => 'تخصيص التطبيق لأجلك';
 
   @override
   String get onboardingPurposeSubtitle =>
-      'ما الغرض الرئيسي من استخدامك لـ OmniBrain؟';
+      'ما هو هدفك الأساسي من استخدام OmniBrain؟';
 
   @override
   String get onboardingPurposeWork => 'العمل والإنتاجية';
 
   @override
-  String get onboardingPurposeEducation => 'التعليم والمدرسة';
+  String get onboardingPurposeEducation => 'التعليم والدراسة';
 
   @override
   String get onboardingPurposeDaily => 'الحياة اليومية والمالية';
 
   @override
-  String get onboardingPreparing => 'جاري التحضير لك...';
+  String get onboardingPreparing => 'جارٍ التجهيز لك...';
 
   @override
   String get dashboardGreeting => 'مرحباً';
@@ -138,7 +138,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dashboardQuickActions => 'إجراءات سريعة';
 
   @override
-  String get dashboardRecent => 'الأخيرة';
+  String get dashboardRecent => 'الأحدث';
 
   @override
   String get dashboardFavorites => 'المفضلة';
@@ -147,13 +147,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notesTitle => 'ملاحظاتي';
 
   @override
-  String get notesEmpty => 'لم يتم إضافة ملاحظات بعد.';
+  String get notesEmpty => 'لا توجد ملاحظات حتى الآن.';
 
   @override
   String get notesNewNote => 'ملاحظة جديدة';
 
   @override
-  String get notesSearch => 'البحث عن الملاحظات...';
+  String get notesSearch => 'بحث في الملاحظات...';
 
   @override
   String get profileTitle => 'الملف الشخصي';
@@ -162,7 +162,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSettings => 'الإعدادات';
 
   @override
-  String get profileAbout => 'حول التطبيق';
+  String get profileAbout => 'عن التطبيق';
 
   @override
   String get profileVersion => 'الإصدار';
@@ -192,7 +192,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
-  String get loading => 'جاري التحميل...';
+  String get loading => 'جارٍ التحميل...';
 
   @override
   String get noConnection => 'لا يوجد اتصال بالإنترنت.';
@@ -205,31 +205,86 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get paywallDisclaimer =>
-      'يمكنك الإلغاء في أي وقت. سيتم خصم الدفع من حساب App Store الخاص بك.';
+      'يمكنك الإلغاء في أي وقت. سيتم الخصم من حساب App Store الخاص بك.';
 
   @override
   String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get privacyPolicyContent =>
-      'يتم تخزين بياناتك (الملاحظات والتذكيرات) بشكل آمن فقط على جهازك. لا يتم تخزين أي بيانات شخصية على خوادمنا.';
+  String get privacyPolicyContent => 'بياناتك مخزنة بأمان على جهازك فقط.';
 
   @override
   String get termsOfUse => 'شروط الاستخدام (EULA)';
 
   @override
   String get termsOfUseContent =>
-      'باستخدام تطبيق OmniBrain AI ، فإنك توافق على شروط اتفاقية ترخيص Apple القياسية (EULA). النتائج التي ينتجها الذكاء الاصطناعي هي لأغراض إعلامية فقط.';
+      'باستخدامك للتطبيق، فإنك توافق على شروط Apple EULA القياسية.';
 
   @override
-  String get paywallSuccess => 'عملية الشراء ناجحة! ميزات PRO نشطة.';
+  String get paywallSuccess => 'تم الشراء بنجاح! تم تفعيل ميزات PRO.';
 
   @override
-  String get paywallFailure => 'تعذر إكمال عملية الشراء أو تم إلغاؤها.';
+  String get paywallFailure => 'لم يكتمل الشراء أو تم إلغاؤه.';
 
   @override
-  String get paywallRestoreSuccess => 'تم استعادة المشتريات بنجاح!';
+  String get paywallRestoreSuccess => 'تمت استعادة المشتريات بنجاح!';
 
   @override
-  String get paywallRestoreFailure => 'لم يتم العثور على شراء صالح لاستعادته.';
+  String get paywallRestoreFailure =>
+      'لم يتم العثور على مشتريات صالحة للاستعادة.';
+
+  @override
+  String get language => 'اللغة';
+
+  @override
+  String get selectLanguage => 'اختر اللغة';
+
+  @override
+  String get systemLanguage => 'لغة النظام (تلقائي)';
+
+  @override
+  String get onboardingReplay => 'عرض مقدمة التطبيق';
+
+  @override
+  String get onboardingFeature1Badge => 'OCR والمصاريف';
+
+  @override
+  String get onboardingFeature1Title => 'مسح الفواتير والمستندات';
+
+  @override
+  String get onboardingFeature1Desc =>
+      'امسح الإيصالات في ثوانٍ، واجمع التكاليف تلقائياً وصدر تقارير Excel للمحاسبة.';
+
+  @override
+  String get onboardingFeature2Badge => 'الدماغ الثاني والصوت';
+
+  @override
+  String get onboardingFeature2Title => 'مساعد صوتي ذكي للملاحظات';
+
+  @override
+  String get onboardingFeature2Desc =>
+      'لخص الاجتماعات والتسجيلات الصوتية بنقرة واحدة وحولها لقوائم مهام.';
+
+  @override
+  String get onboardingFeature3Badge => 'التركيز والمؤقت';
+
+  @override
+  String get onboardingFeature3Title => 'الجزيرة التفاعلية وبومودورو';
+
+  @override
+  String get onboardingFeature3Desc =>
+      'تابع جلساتك على شاشة القفل والجزيرة التفاعلية مع أصوات الطبيعة الهادئة.';
+
+  @override
+  String get onboardingFeature4Badge => 'أدوات شاملة';
+
+  @override
+  String get onboardingFeature4Title => 'تحويل العملات وحاسبة ذكية';
+
+  @override
+  String get onboardingFeature4Desc =>
+      'أسعار صرف حية للعملات، محول متعدد للوحدات وحاسبة ذكية بالخطوات.';
+
+  @override
+  String get onboardingStartExploring => 'ابدأ الاستكشاف';
 }

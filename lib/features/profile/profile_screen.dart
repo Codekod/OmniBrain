@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:omnibrain_ai/core/constants/app_colors.dart';
 import 'package:omnibrain_ai/core/providers/auth_provider.dart';
+import 'package:omnibrain_ai/core/providers/locale_provider.dart';
 import 'package:omnibrain_ai/core/routing/app_router.dart';
 import 'package:omnibrain_ai/core/widgets/gradient_background.dart';
+import 'package:omnibrain_ai/core/widgets/language_selector_sheet.dart';
 import 'package:omnibrain_ai/l10n/app_localizations.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -18,6 +20,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authProvider);
+    final currentLang = ref.watch(currentLanguageProvider);
     final isLoggedIn = authState.isLoggedIn;
 
     return GradientBackground(
@@ -287,15 +290,25 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // ----------------------------------------------------------------
-              // Settings Group: Language / Theme / Notifications
+              // Settings Group: Language / Onboarding / Theme / Notifications
               // ----------------------------------------------------------------
               _buildSettingsGroup([
-                _buildSettingsTile(context, l10n, Icons.language, 'Dil',
-                    'Türkçe', onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text(
-                          'Cihaz dilinize göre otomatik olarak ayarlanır.')));
-                }),
+                _buildSettingsTile(
+                  context,
+                  l10n,
+                  Icons.language_rounded,
+                  l10n.language,
+                  '${currentLang.flag} ${currentLang.nativeName}',
+                  onTap: () => LanguageSelectorSheet.show(context),
+                ),
+                _buildSettingsTile(
+                  context,
+                  l10n,
+                  Icons.slideshow_rounded,
+                  l10n.onboardingReplay,
+                  '',
+                  onTap: () => context.push(RoutePaths.onboarding),
+                ),
                 _buildSettingsTile(context, l10n, Icons.dark_mode, 'Tema',
                     'Karanlık', onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

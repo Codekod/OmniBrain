@@ -11,6 +11,7 @@ import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
 import 'app_localizations_fr.dart';
 import 'app_localizations_it.dart';
+import 'app_localizations_ja.dart';
 import 'app_localizations_pt.dart';
 import 'app_localizations_tr.dart';
 import 'app_localizations_zh.dart';
@@ -107,6 +108,7 @@ abstract class AppLocalizations {
     Locale('es'),
     Locale('fr'),
     Locale('it'),
+    Locale('ja'),
     Locale('pt'),
     Locale('tr'),
     Locale('zh'),
@@ -549,6 +551,108 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Geri yüklenecek geçerli bir satın alma bulunamadı.'**
   String get paywallRestoreFailure;
+
+  /// No description provided for @language.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil'**
+  String get language;
+
+  /// No description provided for @selectLanguage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dil Seçin'**
+  String get selectLanguage;
+
+  /// No description provided for @systemLanguage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sistem Dili (Otomatik)'**
+  String get systemLanguage;
+
+  /// No description provided for @onboardingReplay.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulama Tanıtımını İzle'**
+  String get onboardingReplay;
+
+  /// No description provided for @onboardingFeature1Badge.
+  ///
+  /// In tr, this message translates to:
+  /// **'OCR & MASRAF'**
+  String get onboardingFeature1Badge;
+
+  /// No description provided for @onboardingFeature1Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Fiş & Belge Tarayıcı'**
+  String get onboardingFeature1Title;
+
+  /// No description provided for @onboardingFeature1Desc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiş ve faturalarınızı saniyeler içinde tarayın, harcamalarınızı otomatik toplayıp Excel/Muhasebe raporuna dönüştürün.'**
+  String get onboardingFeature1Desc;
+
+  /// No description provided for @onboardingFeature2Badge.
+  ///
+  /// In tr, this message translates to:
+  /// **'2. BEYİN & SES'**
+  String get onboardingFeature2Badge;
+
+  /// No description provided for @onboardingFeature2Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zekâ Sesli Asistan'**
+  String get onboardingFeature2Title;
+
+  /// No description provided for @onboardingFeature2Desc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplantılarınızı ve ses kayıtlarınızı tek tıkla özetleyin, akıllı notlara ve eylem planlarına dönüştürün.'**
+  String get onboardingFeature2Desc;
+
+  /// No description provided for @onboardingFeature3Badge.
+  ///
+  /// In tr, this message translates to:
+  /// **'ODAK & ZAMANLAYICI'**
+  String get onboardingFeature3Badge;
+
+  /// No description provided for @onboardingFeature3Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dinamik Odak & Canlı Ada'**
+  String get onboardingFeature3Title;
+
+  /// No description provided for @onboardingFeature3Desc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pomodoro seanslarınızı kilit ekranı ve canlı adada takip edin, doğa sesleri eşliğinde kesintisiz odaklanın.'**
+  String get onboardingFeature3Desc;
+
+  /// No description provided for @onboardingFeature4Badge.
+  ///
+  /// In tr, this message translates to:
+  /// **'ÇOK YÖNLÜ ARAÇLAR'**
+  String get onboardingFeature4Badge;
+
+  /// No description provided for @onboardingFeature4Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Çeviri & Hesaplama'**
+  String get onboardingFeature4Title;
+
+  /// No description provided for @onboardingFeature4Desc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı döviz kurları, çoklu birim çevirici ve yapay zeka destekli matematiksel problem çözücü.'**
+  String get onboardingFeature4Desc;
+
+  /// No description provided for @onboardingStartExploring.
+  ///
+  /// In tr, this message translates to:
+  /// **'Keşfetmeye Başla'**
+  String get onboardingStartExploring;
 }
 
 class _AppLocalizationsDelegate
@@ -568,6 +672,7 @@ class _AppLocalizationsDelegate
     'es',
     'fr',
     'it',
+    'ja',
     'pt',
     'tr',
     'zh',
@@ -592,6 +697,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsFr();
     case 'it':
       return AppLocalizationsIt();
+    case 'ja':
+      return AppLocalizationsJa();
     case 'pt':
       return AppLocalizationsPt();
     case 'tr':

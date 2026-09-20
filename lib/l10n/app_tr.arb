@@ -71,5 +71,22 @@
   "paywallSuccess": "Satın alma başarılı! PRO özellikler aktif.",
   "paywallFailure": "Satın alma tamamlanamadı veya iptal edildi.",
   "paywallRestoreSuccess": "Satın almalar başarıyla geri yüklendi!",
-  "paywallRestoreFailure": "Geri yüklenecek geçerli bir satın alma bulunamadı."
+  "paywallRestoreFailure": "Geri yüklenecek geçerli bir satın alma bulunamadı.",
+  "language": "Dil",
+  "selectLanguage": "Dil Seçin",
+  "systemLanguage": "Sistem Dili (Otomatik)",
+  "onboardingReplay": "Uygulama Tanıtımını İzle",
+  "onboardingFeature1Badge": "OCR & MASRAF",
+  "onboardingFeature1Title": "Akıllı Fiş & Belge Tarayıcı",
+  "onboardingFeature1Desc": "Fiş ve faturalarınızı saniyeler içinde tarayın, harcamalarınızı otomatik toplayıp Excel/Muhasebe raporuna dönüştürün.",
+  "onboardingFeature2Badge": "2. BEYİN & SES",
+  "onboardingFeature2Title": "Yapay Zekâ Sesli Asistan",
+  "onboardingFeature2Desc": "Toplantılarınızı ve ses kayıtlarınızı tek tıkla özetleyin, akıllı notlara ve eylem planlarına dönüştürün.",
+  "onboardingFeature3Badge": "ODAK & ZAMANLAYICI",
+  "onboardingFeature3Title": "Dinamik Odak & Canlı Ada",
+  "onboardingFeature3Desc": "Pomodoro seanslarınızı kilit ekranı ve canlı adada takip edin, doğa sesleri eşliğinde kesintisiz odaklanın.",
+  "onboardingFeature4Badge": "ÇOK YÖNLÜ ARAÇLAR",
+  "onboardingFeature4Title": "Akıllı Çeviri & Hesaplama",
+  "onboardingFeature4Desc": "Canlı döviz kurları, çoklu birim çevirici ve yapay zeka destekli matematiksel problem çözücü.",
+  "onboardingStartExploring": "Keşfetmeye Başla"
 }

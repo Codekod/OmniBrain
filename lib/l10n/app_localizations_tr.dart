@@ -234,4 +234,59 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get paywallRestoreFailure =>
       'Geri yüklenecek geçerli bir satın alma bulunamadı.';
+
+  @override
+  String get language => 'Dil';
+
+  @override
+  String get selectLanguage => 'Dil Seçin';
+
+  @override
+  String get systemLanguage => 'Sistem Dili (Otomatik)';
+
+  @override
+  String get onboardingReplay => 'Uygulama Tanıtımını İzle';
+
+  @override
+  String get onboardingFeature1Badge => 'OCR & MASRAF';
+
+  @override
+  String get onboardingFeature1Title => 'Akıllı Fiş & Belge Tarayıcı';
+
+  @override
+  String get onboardingFeature1Desc =>
+      'Fiş ve faturalarınızı saniyeler içinde tarayın, harcamalarınızı otomatik toplayıp Excel/Muhasebe raporuna dönüştürün.';
+
+  @override
+  String get onboardingFeature2Badge => '2. BEYİN & SES';
+
+  @override
+  String get onboardingFeature2Title => 'Yapay Zekâ Sesli Asistan';
+
+  @override
+  String get onboardingFeature2Desc =>
+      'Toplantılarınızı ve ses kayıtlarınızı tek tıkla özetleyin, akıllı notlara ve eylem planlarına dönüştürün.';
+
+  @override
+  String get onboardingFeature3Badge => 'ODAK & ZAMANLAYICI';
+
+  @override
+  String get onboardingFeature3Title => 'Dinamik Odak & Canlı Ada';
+
+  @override
+  String get onboardingFeature3Desc =>
+      'Pomodoro seanslarınızı kilit ekranı ve canlı adada takip edin, doğa sesleri eşliğinde kesintisiz odaklanın.';
+
+  @override
+  String get onboardingFeature4Badge => 'ÇOK YÖNLÜ ARAÇLAR';
+
+  @override
+  String get onboardingFeature4Title => 'Akıllı Çeviri & Hesaplama';
+
+  @override
+  String get onboardingFeature4Desc =>
+      'Canlı döviz kurları, çoklu birim çevirici ve yapay zeka destekli matematiksel problem çözücü.';
+
+  @override
+  String get onboardingStartExploring => 'Keşfetmeye Başla';
 }
