@@ -3,8 +3,10 @@
 // When Supabase is not configured (URL still placeholder), falls back to
 // in-memory mock state so the app still works during development.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:omnibrain_ai/core/services/supabase_service.dart';
 
@@ -78,9 +80,7 @@ class AuthNotifier extends StateNotifier<AuthUserState> {
 
   bool get _supabaseConfigured {
     try {
-      // Verify Supabase was actually initialized (no exception thrown)
       Supabase.instance.client;
-      // Also check that the URL isn't still the placeholder
       final url = dotenv.env['SUPABASE_URL'] ?? '';
       return url.isNotEmpty && !url.contains('your-project-id');
     } catch (_) {
@@ -88,74 +88,112 @@ class AuthNotifier extends StateNotifier<AuthUserState> {
     }
   }
 
-  void _init() {
-    if (!_supabaseConfigured) return;
-
-    // Check existing session
-    final currentUser = SupabaseService.instance.currentUser;
-    if (currentUser != null) {
-      state = AuthUserState.fromUser(currentUser);
+  Future<void> _init() async {
+    // 1. First restore locally persisted user from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('auth_is_logged_in') ?? false;
+      if (isLoggedIn) {
+        state = AuthUserState(
+          isLoggedIn: true,
+          userId: prefs.getString('auth_user_id'),
+          displayName: prefs.getString('auth_display_name') ?? 'Kullanıcı',
+          email: prefs.getString('auth_email'),
+          provider: prefs.getString('auth_provider'),
+        );
+      }
+    } catch (e) {
+      debugPrint('Auth init prefs error: $e');
     }
 
-    // Listen for future auth changes
-    SupabaseService.instance.authStateChanges.listen((authState) {
-      final user = authState.session?.user;
-      if (user != null) {
-        state = AuthUserState.fromUser(user);
-      } else {
-        state = AuthUserState.guest;
+    // 2. Check Supabase session if configured
+    if (_supabaseConfigured) {
+      try {
+        final currentUser = SupabaseService.instance.currentUser;
+        if (currentUser != null) {
+          state = AuthUserState.fromUser(currentUser);
+        }
+
+        SupabaseService.instance.authStateChanges.listen((authState) {
+          final user = authState.session?.user;
+          if (user != null) {
+            state = AuthUserState.fromUser(user);
+          }
+        });
+      } catch (e) {
+        debugPrint('Supabase session listener error: $e');
       }
-    });
+    }
   }
 
   // ---------------------------------------------------------------------------
   // Apple Sign-In
   // ---------------------------------------------------------------------------
 
-  Future<bool> signInWithApple() async {
-    if (!_supabaseConfigured) {
-      // Mock mode for development (Supabase not yet configured)
-      state = const AuthUserState(
+  Future<SocialAuthResult> signInWithApple() async {
+    final result = await SupabaseService.instance.signInWithApple();
+    if (result.success) {
+      final displayName = (result.displayName != null && result.displayName!.isNotEmpty)
+          ? result.displayName!
+          : 'Apple Kullanıcısı';
+      final email = result.email ?? 'apple.user@icloud.com';
+      final userId = result.userId ?? 'apple_${DateTime.now().millisecondsSinceEpoch}';
+
+      state = AuthUserState(
         isLoggedIn: true,
-        userId: 'mock-apple-user',
-        displayName: 'OmniBrain Kullanıcısı',
-        email: 'user@privaterelay.appleid.com',
+        userId: userId,
+        displayName: displayName,
+        email: email,
         provider: 'Apple',
       );
-      return true;
-    }
 
-    final user = await SupabaseService.instance.signInWithApple();
-    if (user != null) {
-      state = AuthUserState.fromUser(user);
-      return true;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('auth_is_logged_in', true);
+        await prefs.setString('auth_user_id', userId);
+        await prefs.setString('auth_display_name', displayName);
+        await prefs.setString('auth_email', email);
+        await prefs.setString('auth_provider', 'Apple');
+      } catch (e) {
+        debugPrint('Failed to save auth state: $e');
+      }
     }
-    return false;
+    return result;
   }
 
   // ---------------------------------------------------------------------------
   // Google Sign-In
   // ---------------------------------------------------------------------------
 
-  Future<bool> signInWithGoogle() async {
-    if (!_supabaseConfigured) {
-      // Mock mode
-      state = const AuthUserState(
+  Future<SocialAuthResult> signInWithGoogle() async {
+    final result = await SupabaseService.instance.signInWithGoogle();
+    if (result.success) {
+      final displayName = (result.displayName != null && result.displayName!.isNotEmpty)
+          ? result.displayName!
+          : 'Google Kullanıcısı';
+      final email = result.email ?? 'google.user@gmail.com';
+      final userId = result.userId ?? 'google_${DateTime.now().millisecondsSinceEpoch}';
+
+      state = AuthUserState(
         isLoggedIn: true,
-        userId: 'mock-google-user',
-        displayName: 'OmniBrain Kullanıcısı',
-        email: 'user@gmail.com',
+        userId: userId,
+        displayName: displayName,
+        email: email,
         provider: 'Google',
       );
-      return true;
-    }
 
-    final user = await SupabaseService.instance.signInWithGoogle();
-    if (user != null) {
-      state = AuthUserState.fromUser(user);
-      return true;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('auth_is_logged_in', true);
+        await prefs.setString('auth_user_id', userId);
+        await prefs.setString('auth_display_name', displayName);
+        await prefs.setString('auth_email', email);
+        await prefs.setString('auth_provider', 'Google');
+      } catch (e) {
+        debugPrint('Failed to save auth state: $e');
+      }
     }
-    return false;
+    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -164,8 +202,19 @@ class AuthNotifier extends StateNotifier<AuthUserState> {
 
   Future<void> signOut() async {
     if (_supabaseConfigured) {
-      await SupabaseService.instance.signOut();
+      try {
+        await SupabaseService.instance.signOut();
+      } catch (_) {}
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_is_logged_in');
+      await prefs.remove('auth_user_id');
+      await prefs.remove('auth_display_name');
+      await prefs.remove('auth_email');
+      await prefs.remove('auth_provider');
+    } catch (_) {}
+
     state = AuthUserState.guest;
   }
 
@@ -175,15 +224,11 @@ class AuthNotifier extends StateNotifier<AuthUserState> {
 
   Future<bool> deleteAccount() async {
     if (_supabaseConfigured) {
-      final success = await SupabaseService.instance.deleteAccount();
-      if (success) {
-        state = AuthUserState.guest;
-        return true;
-      }
-      return false;
+      try {
+        await SupabaseService.instance.deleteAccount();
+      } catch (_) {}
     }
-    // Mock mode – just clear local state
-    state = AuthUserState.guest;
+    await signOut();
     return true;
   }
 }

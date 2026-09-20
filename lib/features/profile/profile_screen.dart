@@ -100,19 +100,34 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     OutlinedButton.icon(
                       onPressed: () async {
-                        final success =
+                        final result =
                             await ref.read(authProvider.notifier).signInWithApple();
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success ? 'Apple ile Giriş Yapıldı!' : 'Giriş iptal edildi.',
+                          if (result.success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Apple ile Giriş Yapıldı!'),
+                                backgroundColor: AppColors.neonPurple,
+                                behavior: SnackBarBehavior.floating,
                               ),
-                              backgroundColor:
-                                  success ? AppColors.neonPurple : Colors.grey,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                            );
+                          } else if (result.isCancelled) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Giriş işlemi iptal edildi.'),
+                                backgroundColor: Colors.grey,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Giriş yapılamadı: ${result.errorMessage ?? "Bilinmeyen hata"}'),
+                                backgroundColor: AppColors.coralRed,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.apple, color: Colors.white, size: 20),
@@ -134,19 +149,34 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
                       onPressed: () async {
-                        final success =
+                        final result =
                             await ref.read(authProvider.notifier).signInWithGoogle();
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success ? 'Google ile Giriş Yapıldı!' : 'Giriş iptal edildi.',
+                          if (result.success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Google ile Giriş Yapıldı!'),
+                                backgroundColor: AppColors.iceBlue,
+                                behavior: SnackBarBehavior.floating,
                               ),
-                              backgroundColor:
-                                  success ? AppColors.iceBlue : Colors.grey,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                            );
+                          } else if (result.isCancelled) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Giriş işlemi iptal edildi.'),
+                                backgroundColor: Colors.grey,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Giriş yapılamadı: ${result.errorMessage ?? "Bilinmeyen hata"}'),
+                                backgroundColor: AppColors.coralRed,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.g_mobiledata,

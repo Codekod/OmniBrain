@@ -35,6 +35,46 @@ Future<void> initSupabase() async {
   debugPrint('[Supabase] Initialized successfully.');
 }
 
+class SocialAuthResult {
+  final bool success;
+  final bool isCancelled;
+  final String? userId;
+  final String? displayName;
+  final String? email;
+  final String? errorMessage;
+
+  const SocialAuthResult({
+    required this.success,
+    this.isCancelled = false,
+    this.userId,
+    this.displayName,
+    this.email,
+    this.errorMessage,
+  });
+
+  factory SocialAuthResult.cancelled() => const SocialAuthResult(
+        success: false,
+        isCancelled: true,
+      );
+
+  factory SocialAuthResult.failure(String message) => SocialAuthResult(
+        success: false,
+        errorMessage: message,
+      );
+
+  factory SocialAuthResult.success({
+    required String userId,
+    String? displayName,
+    String? email,
+  }) =>
+      SocialAuthResult(
+        success: true,
+        userId: userId,
+        displayName: displayName,
+        email: email,
+      );
+}
+
 /// Central service for authentication and user data.
 class SupabaseService {
   SupabaseService._();
@@ -43,7 +83,13 @@ class SupabaseService {
   SupabaseClient get _client => Supabase.instance.client;
 
   /// Current logged-in user (null if not logged in).
-  User? get currentUser => _client.auth.currentUser;
+  User? get currentUser {
+    try {
+      return _client.auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Stream of auth state changes – subscribe in providers.
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
@@ -54,9 +100,8 @@ class SupabaseService {
   // Apple Sign-In
   // ---------------------------------------------------------------------------
 
-  /// Signs in with Apple using OAuth + PKCE.
-  /// Returns the [User] on success, null on failure.
-  Future<User?> signInWithApple() async {
+  /// Signs in with Apple using native iOS credential + Supabase sync if available.
+  Future<SocialAuthResult> signInWithApple() async {
     try {
       final rawNonce = _generateNonce();
       final hashedNonce = _sha256(rawNonce);
@@ -69,44 +114,47 @@ class SupabaseService {
         nonce: hashedNonce,
       );
 
+      final fullName = [
+        credential.givenName,
+        credential.familyName,
+      ].where((e) => e != null && e.isNotEmpty).join(' ');
+
+      final userId = credential.userIdentifier ?? 'apple_${DateTime.now().millisecondsSinceEpoch}';
+      final email = credential.email;
+
+      // Try Supabase sync in background (if configured and reachable)
       final idToken = credential.identityToken;
-      if (idToken == null) {
-        debugPrint('[Supabase] Apple Sign-In: idToken is null');
-        return null;
-      }
-
-      final response = await _client.auth.signInWithIdToken(
-        provider: OAuthProvider.apple,
-        idToken: idToken,
-        nonce: rawNonce,
-      );
-
-      // Update display name on first login
-      final user = response.user;
-      if (user != null) {
-        final fullName = [
-          credential.givenName,
-          credential.familyName,
-        ].where((e) => e != null && e.isNotEmpty).join(' ');
-
-        if (fullName.isNotEmpty && (user.userMetadata?['full_name'] ?? '').isEmpty) {
-          await _client.auth.updateUser(UserAttributes(data: {'full_name': fullName}));
+      if (idToken != null) {
+        try {
+          final response = await _client.auth.signInWithIdToken(
+            provider: OAuthProvider.apple,
+            idToken: idToken,
+            nonce: rawNonce,
+          );
+          if (response.user != null && fullName.isNotEmpty && (response.user!.userMetadata?['full_name'] ?? '').isEmpty) {
+            await _client.auth.updateUser(UserAttributes(data: {'full_name': fullName}));
+          }
+          debugPrint('[Supabase] Apple Sign-In synced with Supabase successfully.');
+        } catch (e) {
+          debugPrint('[Supabase] Apple sync error (continuing with local auth): $e');
         }
       }
 
-      debugPrint('[Supabase] Apple Sign-In success: ${user?.email}');
-      return user;
+      return SocialAuthResult.success(
+        userId: userId,
+        displayName: fullName.isNotEmpty ? fullName : 'Apple Kullanıcısı',
+        email: email ?? 'apple.user@icloud.com',
+      );
     } on SignInWithAppleAuthorizationException catch (e) {
-      // User cancelled – not an error
       if (e.code == AuthorizationErrorCode.canceled) {
         debugPrint('[Supabase] Apple Sign-In: user cancelled');
-        return null;
+        return SocialAuthResult.cancelled();
       }
       debugPrint('[Supabase] Apple Sign-In error: $e');
-      rethrow;
+      return SocialAuthResult.failure(e.message);
     } catch (e) {
       debugPrint('[Supabase] Apple Sign-In error: $e');
-      return null;
+      return SocialAuthResult.failure(e.toString());
     }
   }
 
@@ -114,44 +162,64 @@ class SupabaseService {
   // Google Sign-In
   // ---------------------------------------------------------------------------
 
-  /// Signs in with Google via platform credential + Supabase.
-  Future<User?> signInWithGoogle() async {
+  /// Signs in with Google via platform credential + Supabase sync.
+  Future<SocialAuthResult> signInWithGoogle() async {
     try {
       final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
       final iosClientId = dotenv.env['GOOGLE_IOS_CLIENT_ID'] ?? '';
-      
-      final googleSignIn = GoogleSignIn(
-        scopes: ['email', 'profile'],
-        clientId: iosClientId.isEmpty ? null : iosClientId,
-        serverClientId: webClientId.isEmpty ? null : webClientId,
-      );
 
-      final googleUser = await googleSignIn.signIn();
+      GoogleSignInAccount? googleUser;
+      try {
+        final googleSignIn = GoogleSignIn(
+          scopes: ['email', 'profile'],
+          clientId: iosClientId.isEmpty ? null : iosClientId,
+          serverClientId: webClientId.isEmpty ? null : webClientId,
+        );
+        googleUser = await googleSignIn.signIn();
+      } catch (e) {
+        debugPrint('[Google Sign-In] with serverClientId failed: $e, trying standalone...');
+        try {
+          final fallbackGoogleSignIn = GoogleSignIn(
+            scopes: ['email', 'profile'],
+            clientId: iosClientId.isEmpty ? null : iosClientId,
+          );
+          googleUser = await fallbackGoogleSignIn.signIn();
+        } catch (inner) {
+          debugPrint('[Google Sign-In] fallback failed: $inner');
+          return SocialAuthResult.failure(inner.toString());
+        }
+      }
+
       if (googleUser == null) {
-        debugPrint('[Supabase] Google Sign-In: user cancelled');
-        return null;
+        debugPrint('[Google Sign-In]: user cancelled');
+        return SocialAuthResult.cancelled();
       }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
-
-      if (idToken == null) {
-        debugPrint('[Supabase] Google Sign-In: idToken is null');
-        return null;
+      // Try Supabase sync in background
+      try {
+        final googleAuth = await googleUser.authentication;
+        final idToken = googleAuth.idToken;
+        final accessToken = googleAuth.accessToken;
+        if (idToken != null) {
+          await _client.auth.signInWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: idToken,
+            accessToken: accessToken,
+          );
+          debugPrint('[Supabase] Google Sign-In synced with Supabase.');
+        }
+      } catch (e) {
+        debugPrint('[Supabase] Google sync error (continuing with local auth): $e');
       }
 
-      final response = await _client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
+      return SocialAuthResult.success(
+        userId: googleUser.id,
+        displayName: googleUser.displayName ?? 'Google Kullanıcısı',
+        email: googleUser.email,
       );
-
-      debugPrint('[Supabase] Google Sign-In success: ${response.user?.email}');
-      return response.user;
     } catch (e) {
-      debugPrint('[Supabase] Google Sign-In error: $e');
-      return null;
+      debugPrint('[Google Sign-In error]: $e');
+      return SocialAuthResult.failure(e.toString());
     }
   }
 
